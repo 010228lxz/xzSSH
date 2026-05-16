@@ -6,6 +6,7 @@ from pathlib import Path
 
 from xzssh.cli.helpers import load_config_or_error
 from xzssh.cli.ui import (
+    console,
     print_error,
     print_errors,
     print_info,
@@ -23,6 +24,7 @@ def run(
     output_path: Path,
     suggest_ports: bool,
     force: bool = False,
+    dry_run: bool = False,
 ) -> int:
     with status("Reading source configuration"):
         config = load_config_or_error(config_path)
@@ -38,6 +40,13 @@ def run(
         return 1
     if result.warnings:
         print_warnings(result.warnings)
+
+    if dry_run:
+        content = render_openssh(config, config_path)
+        print_info(f"--dry-run: would write {len(config.hosts)} host(s) to {output_path}")
+        console.print("")
+        console.print(content, markup=False, highlight=False, end="")
+        return 0
 
     if not _safe_to_overwrite(output_path, force):
         print_error(

@@ -18,12 +18,20 @@ from xzssh.validator import validate_config
 
 
 def run(args: argparse.Namespace, config_path: Path) -> int:
+    dry_run = getattr(args, "dry_run", False)
+
     with status("Updating configuration"):
         config = load_config_or_error(config_path)
     if config is None:
         return 1
 
     if args.all:
+        if dry_run:
+            aliases = ", ".join(h.alias for h in config.hosts) or "(none)"
+            print_info(
+                f"--dry-run: would remove all {len(config.hosts)} host(s): {aliases}"
+            )
+            return 0
         if not questionary.confirm("Are you sure you want to remove ALL hosts?").ask():
             print_info("Operation cancelled.")
             return 0
@@ -34,14 +42,20 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
             print_error("No host alias provided for removal.")
             return 1
 
-        initial_count = len(config.hosts)
-        config.hosts = [host for host in config.hosts if host.alias not in args.alias]
-        removed_count = initial_count - len(config.hosts)
-
-        if removed_count == 0:
+        matching = [h.alias for h in config.hosts if h.alias in args.alias]
+        if not matching:
             print_error(f"No hosts found with alias: {', '.join(args.alias)}")
             return 1
 
+        if dry_run:
+            print_info(
+                f"--dry-run: would remove {len(matching)} host(s): {', '.join(matching)}"
+            )
+            return 0
+
+        initial_count = len(config.hosts)
+        config.hosts = [host for host in config.hosts if host.alias not in args.alias]
+        removed_count = initial_count - len(config.hosts)
         print_success(f"Removed {removed_count} host(s).")
 
     with status("Validating updated configuration"):

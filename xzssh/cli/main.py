@@ -63,6 +63,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             output_path,
             suggest_ports=args.suggest_ports,
             force=args.force,
+            dry_run=args.dry_run,
         )
     if args.command == "key":
         if getattr(args, "key_command", None) is None:
