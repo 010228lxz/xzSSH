@@ -1,0 +1,60 @@
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+*.egg
+wheels/
+.eggs/
+
+# Virtual environments
+.venv/
+venv/
+build_venv/
+env/
+
+# Test / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.cache/
+coverage.xml
+*.cover
+
+# Type checkers / linters
+.mypy_cache/
+.ruff_cache/
+.pytype/
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.local
+
+# Junie agent state
+.junie/
+
+# Project-specific
+# Nuitka build outputs
+*.bin
+xzssh.pyz
+
+# Don't commit a user's generated SSH config files if accidentally placed here
+xzssh.json

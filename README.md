@@ -1,0 +1,101 @@
+# xzSSH 🚀
+
+[![PyPI version](https://img.shields.io/pypi/v/xzssh.svg)](https://pypi.org/project/xzssh/)
+[![Python versions](https://img.shields.io/pypi/pyversions/xzssh.svg)](https://pypi.org/project/xzssh/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**xzSSH** is a modern, interactive SSH configuration manager for OpenSSH. It provides a structured, developer-focused workflow for managing complex SSH environments.
+
+## ✨ Key Features
+
+- 🖥️ **Interactive Dashboard**: A keyboard-first, high-contrast neon TUI for managing and connecting to hosts.
+- ⚡ **Fuzzy Search**: Quickly find and connect to servers by alias, hostname, or user with instant keyboard shortcuts.
+- 🎨 **Neon Branding**: High-contrast modern aesthetics featuring Neon Green, Pink, and Cyan for better visual clarity.
+- 🛠️ **Config Isolation**: Keeps your source configuration in a clean JSON file (`~/.ssh/xzssh.json`) and generates the final `~/.ssh/config` deterministically.
+- 🔒 **Security First**: Automatically manages file permissions (e.g., `chmod 600`) and validates key paths.
+- 📊 **Health Checks**: Detects duplicate aliases and LocalForward port conflicts across your entire fleet.
+- 📥 **Easy Migration**: Import existing hosts directly from your standard OpenSSH config.
+
+---
+
+## 🚀 Quick Start
+
+### 📦 Installation
+
+#### Single-File Distribution (Recommended for Sharing)
+For a standalone, source-protected experience without manually installing dependencies:
+
+- **macOS / Linux / Windows (Native Binaries)**:
+  Download the appropriate binary from the [GitHub Releases](https://github.com/xzssh/xzssh/releases) page.
+  1. Transfer the binary to the target machine.
+  2. (Linux/macOS) Grant execution permission: `chmod +x xzssh-linux` or `chmod +x xzssh-macos`.
+  3. Run it directly: `./xzssh-linux` or `xzssh-windows.exe`.
+
+- **Cross-Platform Zip-App (`xzssh.pyz`)**:
+  If you have Python 3.9+ installed, you can use the cross-platform `xzssh.pyz` file:
+  ```bash
+  python3 xzssh.pyz
+  ```
+
+#### Standard Source Installation
+Clone the repository and run the automated installation script:
+
+#### macOS / Linux
+```bash
+git clone https://github.com/xzssh/xzssh.git
+cd xzssh
+chmod +x install.sh
+./install.sh
+```
+The script sets up a virtual environment and optionally creates a global `xzssh` symlink or adds an alias to your `~/.zshrc`.
+
+#### Windows
+```powershell
+.\install.bat
+venv\Scripts\activate
+xzssh
+```
+
+### ⌨️ Interactive Usage
+
+Simply run `xzssh` without any arguments to enter the interactive dashboard. Use arrow keys to navigate or press single-key shortcuts (e.g., `c` to connect, `a` to add).
+
+```bash
+xzssh
+```
+
+---
+
+## 📖 Command Reference
+
+While the interactive mode is recommended, `xzssh` provides a full standard CLI:
+
+| Command | Description |
+| :--- | :--- |
+| `list` | Display all configured hosts in a styled table. |
+| `connect [alias]` | Quickly connect to a host via alias or fuzzy search. |
+| `add` | Interactively add a new host entry. |
+| `remove [alias...]` | Remove one or more hosts by alias. |
+| `import [file]` | Import host entries from an existing SSH config. |
+| `check` | Analyze configuration for errors or port conflicts. |
+| `generate` | Regenerate the final `~/.ssh/config` file. |
+| `key` | Manage private keys and integrate with `ssh-agent`. |
+
+---
+
+## 🏗️ Architecture
+
+xzSSH follows a strict **Parse ➔ Validate ➔ Generate** pipeline:
+
+1. **Model**: Pure Python dataclasses define the configuration schema.
+2. **Parser**: Maps JSON source files into the internal model with type coercion.
+3. **Validator**: Performs semantic checks (ports, aliases, file paths).
+4. **Generator**: Renders a deterministic, human-readable OpenSSH configuration.
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request or open an issue on GitHub.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
