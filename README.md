@@ -1,7 +1,6 @@
 # xzSSH 🚀
 
-[![PyPI version](https://img.shields.io/pypi/v/xzssh.svg)](https://pypi.org/project/xzssh/)
-[![Python versions](https://img.shields.io/pypi/pyversions/xzssh.svg)](https://pypi.org/project/xzssh/)
+[![Python versions](https://img.shields.io/badge/python-3.9%E2%80%933.14-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 **xzSSH** is a modern, interactive SSH configuration manager for OpenSSH. It provides a structured, developer-focused workflow for managing complex SSH environments.
