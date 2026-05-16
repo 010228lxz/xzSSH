@@ -1,0 +1,111 @@
+from __future__ import annotations
+
+import argparse
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parent = argparse.ArgumentParser(add_help=False)
+    parent.add_argument(
+        "--config",
+        help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
+    )
+    parent.add_argument(
+        "--suggest-ports",
+        action="store_true",
+        help="Suggest next free LocalForward port when conflicts are found",
+    )
+
+    parser = argparse.ArgumentParser(prog="xzssh", add_help=False)
+    parser.add_argument(
+        "--config",
+        help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
+    )
+    parser.add_argument(
+        "--suggest-ports",
+        action="store_true",
+        help="Suggest next free LocalForward port when conflicts are found",
+    )
+    parser.add_argument(
+        "-h", "--help",
+        action="store_true",
+        help="Show this help message and exit",
+    )
+
+    subparsers = parser.add_subparsers(dest="command", required=False)
+
+    subparsers.add_parser("list", parents=[parent], help="List configured hosts")
+
+    connect_parser = subparsers.add_parser(
+        "connect", parents=[parent], help="Connect to a host"
+    )
+    connect_parser.add_argument("alias", nargs="?", help="Alias of the host to connect to")
+
+    subparsers.add_parser("menu", parents=[parent], help="Open interactive management menu")
+
+    add_parser = subparsers.add_parser("add", parents=[parent], help="Add a host")
+    add_parser.add_argument("--alias")
+    add_parser.add_argument("--host-name")
+    add_parser.add_argument("--user")
+    add_parser.add_argument("--port", type=int)
+    add_parser.add_argument("--identity-file")
+    add_parser.add_argument("--tag", action="append", default=[], help="Tag for the host")
+    add_parser.add_argument(
+        "--local-forward",
+        action="append",
+        default=[],
+        help="local_port:remote_host:remote_port",
+    )
+    add_parser.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace existing host with the same alias",
+    )
+
+    remove_parser = subparsers.add_parser(
+        "remove", parents=[parent], help="Remove a host"
+    )
+    remove_parser.add_argument("alias", nargs="*", help="Alias of the host(s) to remove")
+    remove_parser.add_argument("--all", action="store_true", help="Remove all hosts")
+
+    import_parser = subparsers.add_parser(
+        "import", parents=[parent], help="Import from SSH config"
+    )
+    import_parser.add_argument(
+        "file", nargs="?", help="Path to OpenSSH config file (default: ~/.ssh/config)"
+    )
+    import_parser.add_argument(
+        "--overwrite", action="store_true", help="Overwrite existing hosts"
+    )
+
+    subparsers.add_parser("check", parents=[parent], help="Validate config")
+
+    generate_parser = subparsers.add_parser(
+        "generate", parents=[parent], help="Generate ~/.ssh/config"
+    )
+    generate_parser.add_argument(
+        "--output",
+        help="Output path for generated OpenSSH config (default: ~/.ssh/config)",
+    )
+
+    key_parser = subparsers.add_parser("key", parents=[parent], help="Manage keys")
+    key_subparsers = key_parser.add_subparsers(dest="key_command", required=False)
+
+    key_add = key_subparsers.add_parser(
+        "add", parents=[parent], help="Add a key reference"
+    )
+    key_add.add_argument("name")
+    key_add.add_argument("path")
+    key_add.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace existing key with the same name",
+    )
+
+    key_subparsers.add_parser("list", parents=[parent], help="List configured keys")
+
+    key_add_agent = key_subparsers.add_parser(
+        "add-agent", parents=[parent], help="Add key to ssh-agent"
+    )
+    key_add_agent.add_argument("name")
+
+    return parser
