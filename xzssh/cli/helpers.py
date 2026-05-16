@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Optional
 
 from xzssh.cli.ui import print_error
 from xzssh.model import Config, LocalForward
 from xzssh.parser import ConfigParseError, load_config
-from xzssh.platform import resolve_path
+from xzssh.platform import ensure_secure_file_permissions, resolve_path
 
 
 def load_config_or_error(config_path: Path) -> Optional[Config]:
@@ -53,9 +54,30 @@ def parse_local_forward_arg(raw: str) -> LocalForward:
 
 
 def write_config(config_path: Path, config: Config) -> None:
+    """Persist a Config atomically with restrictive permissions.
+
+    Writes to a sibling ``.tmp`` file, applies POSIX 0600 (or Windows ACL
+    equivalent), then ``os.replace``\\s into place — so a crash mid-write
+    cannot leave the live config truncated. The JSON source contains host
+    metadata and identity-file paths and is treated as secret.
+    """
     config_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(config.to_dict(), indent=2, ensure_ascii=False)
-    config_path.write_text(payload + "\n", encoding="utf-8")
+    payload = json.dumps(config.to_dict(), indent=2, ensure_ascii=False) + "\n"
+
+    tmp_path = config_path.with_name(config_path.name + ".tmp")
+    try:
+        tmp_path.write_text(payload, encoding="utf-8")
+        # Apply restrictive perms BEFORE moving into place so there's no
+        # window where the live file exists with default perms.
+        ensure_secure_file_permissions(tmp_path)
+        os.replace(tmp_path, config_path)
+    except OSError:
+        if tmp_path.exists():
+            try:
+                tmp_path.unlink()
+            except OSError:
+                pass
+        raise
 
 
 def resolve_key_path(path_value: str, source_path: Path) -> Path:

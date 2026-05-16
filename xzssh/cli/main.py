@@ -59,7 +59,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             Path(args.output) if args.output else platform_default_output_path()
         )
         return generate_cmd.run(
-            config_path, output_path, suggest_ports=args.suggest_ports
+            config_path,
+            output_path,
+            suggest_ports=args.suggest_ports,
+            force=args.force,
         )
     if args.command == "key":
         if getattr(args, "key_command", None) is None:
