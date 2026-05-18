@@ -25,7 +25,7 @@
 For a standalone, source-protected experience without manually installing dependencies:
 
 - **macOS / Linux / Windows (Native Binaries)**:
-  Download the appropriate binary from the [GitHub Releases](https://github.com/xzssh/xzssh/releases) page.
+  Download the appropriate binary from the [GitHub Releases](https://github.com/010228lxz/xzSSH/releases) page.
   1. Transfer the binary to the target machine.
   2. (Linux/macOS) Grant execution permission: `chmod +x xzssh-linux` or `chmod +x xzssh-macos`.
   3. Run it directly: `./xzssh-linux` or `xzssh-windows.exe`.
@@ -41,8 +41,8 @@ Clone the repository and run the automated installation script:
 
 #### macOS / Linux
 ```bash
-git clone https://github.com/xzssh/xzssh.git
-cd xzssh
+git clone https://github.com/010228lxz/xzSSH.git
+cd xzSSH
 chmod +x install.sh
 ./install.sh
 ```

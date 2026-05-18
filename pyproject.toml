@@ -36,10 +36,10 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/xzssh/xzssh"
-Documentation = "https://github.com/xzssh/xzssh#readme"
-Issues = "https://github.com/xzssh/xzssh/issues"
-Repository = "https://github.com/xzssh/xzssh.git"
+Homepage = "https://github.com/010228lxz/xzSSH"
+Documentation = "https://github.com/010228lxz/xzSSH#readme"
+Issues = "https://github.com/010228lxz/xzSSH/issues"
+Repository = "https://github.com/010228lxz/xzSSH.git"
 
 [project.scripts]
 xzssh = "xzssh.cli.main:main"
