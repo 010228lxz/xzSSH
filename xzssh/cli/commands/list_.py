@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+from typing import List, Optional
 
 import questionary
 
 from xzssh.cli.commands import add as add_cmd
 from xzssh.cli.commands import remove as remove_cmd
-from xzssh.cli.helpers import load_config_or_error
+from xzssh.cli.helpers import filter_hosts_by_tags, load_config_or_error
 from xzssh.cli.ui import (
     console,
     print_banner,
     print_error,
     print_errors,
     print_host_table,
+    print_info,
     print_step,
     print_warnings,
     prompt_select_action,
@@ -23,7 +25,13 @@ from xzssh.cli.ui import (
 from xzssh.validator import validate_config
 
 
-def run(config_path: Path, suggest_ports: bool, interactive: bool = False) -> int:
+def run(
+    config_path: Path,
+    suggest_ports: bool,
+    interactive: bool = False,
+    tags: Optional[List[str]] = None,
+) -> int:
+    tags = list(tags or [])
     while True:
         if interactive:
             console.clear()
@@ -47,8 +55,21 @@ def run(config_path: Path, suggest_ports: bool, interactive: bool = False) -> in
         if result.warnings:
             print_warnings(result.warnings)
 
-        print_step(f"Retrieved {len(config.hosts)} configured host(s)")
-        print_host_table(config.hosts)
+        displayed_hosts = filter_hosts_by_tags(config.hosts, tags)
+
+        if tags:
+            tag_str = ", ".join(tags)
+            if not displayed_hosts:
+                print_info(f"No hosts match tag(s): {tag_str}")
+                return 0
+            print_step(
+                f"Showing {len(displayed_hosts)} of {len(config.hosts)} host(s)"
+                f" · filter: {tag_str}"
+            )
+        else:
+            print_step(f"Retrieved {len(config.hosts)} configured host(s)")
+
+        print_host_table(displayed_hosts)
 
         if not interactive:
             return 0

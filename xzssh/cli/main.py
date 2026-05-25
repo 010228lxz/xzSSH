@@ -41,9 +41,18 @@ def main(argv: Optional[List[str]] = None) -> int:
     print_banner()
 
     if args.command == "list":
-        return list_cmd.run(config_path, args.suggest_ports)
+        return list_cmd.run(
+            config_path,
+            args.suggest_ports,
+            tags=getattr(args, "tag", None) or [],
+        )
     if args.command == "connect":
-        return connect_cmd.run(args, config_path, args.suggest_ports)
+        return connect_cmd.run(
+            args,
+            config_path,
+            args.suggest_ports,
+            tags=getattr(args, "tag", None) or [],
+        )
     if args.command == "menu":
         return menu_cmd.main_menu(config_path, args.suggest_ports)
     if args.command == "add":

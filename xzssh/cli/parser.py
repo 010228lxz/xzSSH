@@ -33,12 +33,32 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=False)
 
-    subparsers.add_parser("list", parents=[parent], help="List configured hosts")
+    list_parser = subparsers.add_parser("list", parents=[parent], help="List configured hosts")
+    list_parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        metavar="TAG",
+        help=(
+            "Show only hosts with this tag (repeatable; a host matches if it has"
+            " any of the given tags)"
+        ),
+    )
 
     connect_parser = subparsers.add_parser(
         "connect", parents=[parent], help="Connect to a host"
     )
     connect_parser.add_argument("alias", nargs="?", help="Alias of the host to connect to")
+    connect_parser.add_argument(
+        "--tag",
+        action="append",
+        default=[],
+        metavar="TAG",
+        help=(
+            "Restrict fuzzy-search choices to hosts with this tag (repeatable;"
+            " OR semantics; has no effect when <alias> is given explicitly)"
+        ),
+    )
 
     subparsers.add_parser("menu", parents=[parent], help="Open interactive management menu")
 

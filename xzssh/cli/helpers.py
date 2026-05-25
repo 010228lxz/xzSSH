@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from xzssh.cli.ui import print_error
-from xzssh.model import Config, LocalForward
+from xzssh.model import Config, Host, LocalForward
 from xzssh.parser import ConfigParseError, load_config
 from xzssh.platform import ensure_secure_file_permissions, resolve_path
 
@@ -82,3 +82,15 @@ def write_config(config_path: Path, config: Config) -> None:
 
 def resolve_key_path(path_value: str, source_path: Path) -> Path:
     return resolve_path(path_value, source_path.parent)
+
+
+def filter_hosts_by_tags(hosts: List[Host], tags: List[str]) -> List[Host]:
+    """Return hosts that have at least one of the given tags (OR semantics).
+
+    When *tags* is empty every host is returned unchanged, preserving the
+    default "show everything" behaviour.
+    """
+    if not tags:
+        return hosts
+    tag_set = set(tags)
+    return [h for h in hosts if tag_set & set(h.tags)]
