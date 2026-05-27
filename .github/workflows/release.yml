@@ -44,7 +44,10 @@ jobs:
         with:
           nuitka-version: main
           script-name: xzssh/cli/main.py
-          onefile: true
+          # `onefile: true` was removed upstream — newer Nuitka rejects mixing
+          # the deprecated --onefile flag with the new --mode=. Use mode:
+          # onefile instead, which produces the same single-binary output.
+          mode: onefile
           output-file: ${{ matrix.artifact_name }}
 
       - name: Upload artifact
