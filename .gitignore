@@ -51,6 +51,9 @@ Thumbs.db
 # Junie agent state
 .junie/
 
+# Claude agent state (scheduled-tasks lock, local settings, etc.)
+.claude/
+
 # Project-specific
 # Nuitka build outputs
 *.bin
