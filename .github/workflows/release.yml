@@ -16,13 +16,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
         include:
           - os: ubuntu-latest
-            artifact_name: xzssh-linux
             asset_name: xzssh-linux
           - os: windows-latest
-            artifact_name: xzssh.exe
             asset_name: xzssh-windows.exe
           - os: macos-latest
-            artifact_name: xzssh.bin
             asset_name: xzssh-macos
 
     steps:
@@ -48,19 +45,26 @@ jobs:
           # the deprecated --onefile flag with the new --mode=. Use mode:
           # onefile instead, which produces the same single-binary output.
           mode: onefile
-          output-file: ${{ matrix.artifact_name }}
+          # Output file and artifact folder share one name so the release
+          # step's glob (artifacts/<asset>/<asset>) actually matches the
+          # binary inside the downloaded folder.
+          output-file: ${{ matrix.asset_name }}
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.asset_name }}
-          path: build/${{ matrix.artifact_name }}
+          path: build/${{ matrix.asset_name }}
 
   release:
     name: Create Release
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    # Required so GITHUB_TOKEN can create the release. Without this the
+    # token defaults to read-only and the API returns 403.
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
