@@ -82,6 +82,11 @@ def parse_openssh_config(path: Path) -> Tuple[List[Host], List[str]]:
                     )
             elif key_lower == "identityfile":
                 host.identity_file = value
+            elif key_lower == "proxyjump":
+                # OpenSSH allows comma-separated chains (`ProxyJump a,b,c`).
+                # We only model a single bastion for now; preserve the raw
+                # value so the user can edit it post-import.
+                host.proxy_jump = value
 
     return hosts, warnings
 

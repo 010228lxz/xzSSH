@@ -32,6 +32,7 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         args.user = details["user"]
         args.port = details["port"]
         args.identity_file = details["identity_file"]
+        args.proxy_jump = details.get("proxy_jump")
         args.tag = details.get("tags", [])
 
     with status("Preparing to add host"):
@@ -53,6 +54,7 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         user=args.user,
         port=args.port,
         identity_file=args.identity_file,
+        proxy_jump=getattr(args, "proxy_jump", None),
         local_forwards=local_forwards,
         tags=args.tag,
     )

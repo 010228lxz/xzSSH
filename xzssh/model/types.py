@@ -25,6 +25,7 @@ class Host:
     user: Optional[str] = None
     port: Optional[int] = None
     identity_file: Optional[str] = None
+    proxy_jump: Optional[str] = None
     local_forwards: List[LocalForward] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     last_used: Optional[str] = None
@@ -42,6 +43,8 @@ class Host:
             data["port"] = self.port
         if self.identity_file is not None:
             data["identity_file"] = self.identity_file
+        if self.proxy_jump is not None:
+            data["proxy_jump"] = self.proxy_jump
         if self.last_used is not None:
             data["last_used"] = self.last_used
         return data

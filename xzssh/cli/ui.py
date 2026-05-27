@@ -106,6 +106,7 @@ def print_host_table(hosts: List[Any], title: Optional[str] = None):
     table.add_column("Hostname", style="host")
     table.add_column("User", style="user")
     table.add_column("Port", style="port")
+    table.add_column("Via", style="port")
     table.add_column("Tags", style="tag")
     table.add_column("Last Used", style="last_used")
 
@@ -142,6 +143,7 @@ def print_host_table(hosts: List[Any], title: Optional[str] = None):
             host.host_name,
             host.user or "[muted]-[/muted]",
             str(host.port) if host.port else "[muted]22[/muted]",
+            host.proxy_jump or "[muted]-[/muted]",
             tags_str,
             last_used_str
         )
@@ -246,19 +248,25 @@ def prompt_host_details(existing_host: Optional[Any] = None) -> Dict[str, Any]:
         "Identity File Path (optional):",
         default=existing_host.identity_file if existing_host and existing_host.identity_file else ""
     ).ask()
-    
+
+    proxy_jump = questionary.text(
+        "ProxyJump bastion alias (optional, leave blank for direct connect):",
+        default=existing_host.proxy_jump if existing_host and existing_host.proxy_jump else ""
+    ).ask()
+
     tags_str = questionary.text(
         "Tags (comma separated, optional):",
         default=", ".join(existing_host.tags) if existing_host and existing_host.tags else ""
     ).ask()
     tags = [t.strip() for t in tags_str.split(",") if t.strip()] if tags_str else []
-    
+
     return {
         "alias": alias,
         "host_name": host_name,
         "user": user if user else None,
         "port": port,
         "identity_file": identity_file if identity_file else None,
+        "proxy_jump": proxy_jump if proxy_jump else None,
         "tags": tags,
         "local_forwards": existing_host.local_forwards if existing_host else []
     }

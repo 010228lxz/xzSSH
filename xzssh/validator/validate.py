@@ -38,6 +38,10 @@ def validate_config(
             used_ports,
         )
 
+    # ProxyJump references can only be resolved after every host has been
+    # seen — a bastion may be declared after the host that jumps through it.
+    _validate_proxy_jump_references(config.hosts, seen_aliases, result)
+
     _validate_keys(config.keys, result, source_path)
 
     _validate_local_port_conflicts(
@@ -79,6 +83,11 @@ def _validate_host(
     if host.identity_file is not None and not str(host.identity_file).strip():
         result.errors.append(
             f"hosts[{idx}].identity_file must be a non-empty string if provided"
+        )
+
+    if host.proxy_jump is not None and not str(host.proxy_jump).strip():
+        result.errors.append(
+            f"hosts[{idx}].proxy_jump must be a non-empty string if provided"
         )
 
     host_label = _host_label(host)
@@ -128,6 +137,36 @@ def _validate_local_forward(
             )
         local_port_map.setdefault(local_forward.local_port, []).append(host_label)
         used_ports.add(local_forward.local_port)
+
+
+def _validate_proxy_jump_references(
+    hosts: List[Host],
+    seen_aliases: Set[str],
+    result: ValidationResult,
+) -> None:
+    """Surface dangling ProxyJump references as errors.
+
+    A host that declares ``proxy_jump = "bastion"`` must reference an
+    alias that exists elsewhere in the config — otherwise ``ssh`` will
+    fail at connect time with a confusing "No such host" message. We
+    catch the typo here instead.
+    """
+    for host in hosts:
+        target = host.proxy_jump
+        if target is None or not target.strip():
+            continue
+        # Whitespace-tolerant: "bastion " is the same alias as "bastion".
+        target = target.strip()
+        if target == host.alias:
+            result.errors.append(
+                f"Host '{host.alias}' has proxy_jump pointing at itself"
+            )
+            continue
+        if target not in seen_aliases:
+            result.errors.append(
+                f"Host '{host.alias}' references unknown ProxyJump alias "
+                f"'{target}' — declare that host first or remove the reference"
+            )
 
 
 def _validate_local_port_conflicts(

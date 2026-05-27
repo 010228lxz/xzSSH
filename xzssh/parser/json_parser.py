@@ -68,6 +68,7 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
     user = _optional_str(data, "user")
     port = _optional_int(data, "port")
     identity_file = _optional_str(data, "identity_file")
+    proxy_jump = _optional_str(data, "proxy_jump")
     last_used = _optional_str(data, "last_used")
     
     tags_value = data.get("tags", [])
@@ -99,6 +100,7 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
         user=user,
         port=port,
         identity_file=identity_file,
+        proxy_jump=proxy_jump,
         local_forwards=local_forwards,
         tags=tags,
         last_used=last_used,

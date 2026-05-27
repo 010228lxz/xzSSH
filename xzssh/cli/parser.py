@@ -68,6 +68,11 @@ def build_parser() -> argparse.ArgumentParser:
     add_parser.add_argument("--user")
     add_parser.add_argument("--port", type=int)
     add_parser.add_argument("--identity-file")
+    add_parser.add_argument(
+        "--proxy-jump",
+        metavar="ALIAS",
+        help="Bastion host alias to jump through (becomes ProxyJump in the generated config)",
+    )
     add_parser.add_argument("--tag", action="append", default=[], help="Tag for the host")
     add_parser.add_argument(
         "--local-forward",

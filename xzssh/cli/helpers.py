@@ -111,6 +111,8 @@ def build_ssh_command(
         args.extend(["-p", str(host.port)])
     if host.identity_file:
         args.extend(["-i", host.identity_file])
+    if host.proxy_jump:
+        args.extend(["-J", host.proxy_jump])
     if extra_options:
         args.extend(extra_options)
     target = host.host_name

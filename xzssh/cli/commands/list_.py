@@ -103,6 +103,7 @@ def run(
                 user=None,
                 port=None,
                 identity_file=None,
+                proxy_jump=None,
                 local_forward=[],
                 tag=None,
                 replace=False,

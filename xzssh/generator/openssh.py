@@ -23,6 +23,8 @@ def render_openssh(config: Config, source_path: Path) -> str:
         if host.identity_file is not None:
             resolved = resolve_identity_file(host.identity_file, source_path)
             lines.append(f"  IdentityFile {resolved}")
+        if host.proxy_jump is not None:
+            lines.append(f"  ProxyJump {host.proxy_jump}")
         for local_forward in host.local_forwards:
             lines.append(
                 "  LocalForward "
