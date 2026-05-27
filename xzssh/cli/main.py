@@ -13,6 +13,7 @@ from xzssh.cli.commands import (
     list_ as list_cmd,
     menu as menu_cmd,
     remove as remove_cmd,
+    test as test_cmd,
 )
 from xzssh.cli.parser import build_parser
 from xzssh.cli.ui import print_banner, print_help
@@ -63,6 +64,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return import_cmd.run(args, config_path)
     if args.command == "check":
         return check_cmd.run(config_path, args.suggest_ports)
+    if args.command == "test":
+        return test_cmd.run(args, config_path)
     if args.command == "generate":
         output_path = (
             Path(args.output) if args.output else platform_default_output_path()

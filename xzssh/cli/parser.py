@@ -104,6 +104,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("check", parents=[parent], help="Validate config")
 
+    test_parser = subparsers.add_parser(
+        "test",
+        parents=[parent],
+        help="Probe connectivity without opening an interactive shell",
+    )
+    test_parser.add_argument(
+        "alias",
+        nargs="?",
+        help="Alias of the host to probe (omit when using --all)",
+    )
+    test_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Probe every configured host in parallel",
+    )
+    test_parser.add_argument(
+        "--timeout",
+        type=int,
+        default=5,
+        metavar="SECONDS",
+        help="Per-host connect timeout (default: 5)",
+    )
+
     generate_parser = subparsers.add_parser(
         "generate", parents=[parent], help="Generate ~/.ssh/config"
     )

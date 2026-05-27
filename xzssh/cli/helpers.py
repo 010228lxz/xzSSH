@@ -94,3 +94,27 @@ def filter_hosts_by_tags(hosts: List[Host], tags: List[str]) -> List[Host]:
         return hosts
     tag_set = set(tags)
     return [h for h in hosts if tag_set & set(h.tags)]
+
+
+def build_ssh_command(
+    host: Host, extra_options: Optional[List[str]] = None
+) -> List[str]:
+    """Build the ``ssh`` argv for connecting to *host*.
+
+    Centralised so ``connect``, ``test``, and future commands like ``which``
+    all share one source of truth. ``extra_options`` is appended verbatim
+    before the connection target (useful for ``-o BatchMode=yes`` and
+    similar overrides).
+    """
+    args: List[str] = ["ssh"]
+    if host.port:
+        args.extend(["-p", str(host.port)])
+    if host.identity_file:
+        args.extend(["-i", host.identity_file])
+    if extra_options:
+        args.extend(extra_options)
+    target = host.host_name
+    if host.user:
+        target = f"{host.user}@{target}"
+    args.append(target)
+    return args

@@ -8,7 +8,12 @@ from typing import List, Optional
 
 import questionary
 
-from xzssh.cli.helpers import filter_hosts_by_tags, load_config_or_error, write_config
+from xzssh.cli.helpers import (
+    build_ssh_command,
+    filter_hosts_by_tags,
+    load_config_or_error,
+    write_config,
+)
 from xzssh.cli.ui import print_error, print_info
 
 
@@ -65,15 +70,7 @@ def run(
         f"({host.user or 'default'}@{host.host_name})..."
     )
 
-    ssh_args = ["ssh"]
-    if host.port:
-        ssh_args.extend(["-p", str(host.port)])
-    if host.identity_file:
-        ssh_args.extend(["-i", host.identity_file])
-    target = host.host_name
-    if host.user:
-        target = f"{host.user}@{target}"
-    ssh_args.append(target)
+    ssh_args = build_ssh_command(host)
 
     returncode = 0
     try:
