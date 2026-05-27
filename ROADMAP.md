@@ -16,55 +16,19 @@ deliberately rough; pad them when planning real work.
 
 ---
 
-## Tier 1 — Ship next
+## Tier 1 — Shipped ✅
 
-Highest user value, clean fit with the existing model.
+All Tier 1 items have shipped — see [CHANGELOG.md](CHANGELOG.md) for
+the exact version each one landed in:
 
-### `ProxyJump` support — `[M]`
+- ✅ Tag filtering on `list` and `connect` — **v0.1.0**
+- ✅ `xzssh test <alias>` connectivity probe — **v0.2.0**
+- ✅ `ProxyJump` support (bastion hosts) end-to-end — **v0.3.0**
+- ✅ Shell tab-completion via `argcomplete` — **v0.4.0**
 
-Bastion hosts are the single most-requested missing field. Without it,
-xzSSH can't model the most common non-trivial SSH deployment.
-
-- Add `proxy_jump: Optional[str]` to [Host](xzssh/model/types.py).
-- Emit `ProxyJump <alias>` in [openssh.py](xzssh/generator/openssh.py).
-- Validator: when a host has `proxy_jump`, the referenced alias must
-  exist in the same config. Surface dangling references as errors.
-- Importer: pick up `ProxyJump` in [openssh_parser.py](xzssh/parser/openssh_parser.py).
-- `--proxy-jump bastion` flag on `xzssh add`; questionary prompt for the
-  interactive form.
-
-### Tag filtering on `list` and `connect` — `[S]`
-
-`Host.tags` exists but is invisible — no way to filter, search, or
-group by it. The fix is small and immediately useful for anyone with
-prod/staging/personal hosts.
-
-- `xzssh list --tag prod` filters the table.
-- `xzssh connect --tag prod` restricts the fuzzy-search choices.
-- Multiple `--tag` flags AND'd (or OR'd — pick one and document).
-- Tag chip column already exists in the rendered table; just filter the row list.
-
-### `xzssh test <alias>` — `[S]`
-
-Verify connectivity without opening an interactive shell. Useful before
-`xzssh connect` in scripts and as a `check`-level health probe.
-
-- Run `ssh -o BatchMode=yes -o ConnectTimeout=5 <alias> true`.
-- Report reachable / auth-failed / timeout based on stderr + returncode.
-- `xzssh test --all` to probe every host (parallelize with a small
-  thread pool — keep timeout tight).
-- Useful exit codes: 0 = reachable, 1 = unreachable, 2 = unknown alias.
-
-### Shell completion — `[M]`
-
-Tab-complete `xzssh connect <TAB>` to a list of aliases. Daily-use
-quality-of-life that compounds across every session.
-
-- `argcomplete` is the lowest-effort path (decorate the parser, install
-  a one-line shell hook).
-- Alternative: hand-roll bash/zsh/fish completion scripts shipped in
-  [completions/](completions/) and document the install step in README.
-- Complete aliases for `connect`, `remove`, `test`, `key add-agent`.
+`build_ssh_command()` was extracted along the way (in v0.2.0) and is
+now the single source of truth for ssh argv construction — reused by
+`connect`, `test`, and any future command like `which`.
 
 ---
 
