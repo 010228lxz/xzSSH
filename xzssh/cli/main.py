@@ -15,6 +15,7 @@ from xzssh.cli.commands import (
     remove as remove_cmd,
     test as test_cmd,
 )
+from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
 from xzssh.cli.ui import print_banner, print_help
 from xzssh.platform import (
@@ -25,6 +26,9 @@ from xzssh.platform import (
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = build_parser()
+    # Activate shell completion when argcomplete is installed AND the
+    # process is being driven by the completion shim. No-op otherwise.
+    install_argcomplete(parser)
     args = parser.parse_args(argv)
 
     config_path = (

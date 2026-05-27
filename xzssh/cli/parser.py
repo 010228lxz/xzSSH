@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 
+from xzssh.cli.completion import alias_completer, key_completer
+
 
 def build_parser() -> argparse.ArgumentParser:
     parent = argparse.ArgumentParser(add_help=False)
@@ -48,7 +50,10 @@ def build_parser() -> argparse.ArgumentParser:
     connect_parser = subparsers.add_parser(
         "connect", parents=[parent], help="Connect to a host"
     )
-    connect_parser.add_argument("alias", nargs="?", help="Alias of the host to connect to")
+    connect_alias = connect_parser.add_argument(
+        "alias", nargs="?", help="Alias of the host to connect to"
+    )
+    connect_alias.completer = alias_completer  # type: ignore[attr-defined]
     connect_parser.add_argument(
         "--tag",
         action="append",
@@ -89,7 +94,10 @@ def build_parser() -> argparse.ArgumentParser:
     remove_parser = subparsers.add_parser(
         "remove", parents=[parent], help="Remove a host"
     )
-    remove_parser.add_argument("alias", nargs="*", help="Alias of the host(s) to remove")
+    remove_alias = remove_parser.add_argument(
+        "alias", nargs="*", help="Alias of the host(s) to remove"
+    )
+    remove_alias.completer = alias_completer  # type: ignore[attr-defined]
     remove_parser.add_argument("--all", action="store_true", help="Remove all hosts")
     remove_parser.add_argument(
         "--dry-run",
@@ -114,11 +122,12 @@ def build_parser() -> argparse.ArgumentParser:
         parents=[parent],
         help="Probe connectivity without opening an interactive shell",
     )
-    test_parser.add_argument(
+    test_alias = test_parser.add_argument(
         "alias",
         nargs="?",
         help="Alias of the host to probe (omit when using --all)",
     )
+    test_alias.completer = alias_completer  # type: ignore[attr-defined]
     test_parser.add_argument(
         "--all",
         action="store_true",
@@ -170,6 +179,7 @@ def build_parser() -> argparse.ArgumentParser:
     key_add_agent = key_subparsers.add_parser(
         "add-agent", parents=[parent], help="Add key to ssh-agent"
     )
-    key_add_agent.add_argument("name")
+    key_add_agent_name = key_add_agent.add_argument("name")
+    key_add_agent_name.completer = key_completer  # type: ignore[attr-defined]
 
     return parser

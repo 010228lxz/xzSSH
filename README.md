@@ -55,6 +55,28 @@ venv\Scripts\activate
 xzssh
 ```
 
+### ⌨️ Tab Completion (optional)
+
+xzSSH supports tab-completion for host aliases on bash, zsh, and fish via
+[argcomplete](https://kislyuk.github.io/argcomplete/). Once installed, hit
+`<TAB>` after `xzssh connect`, `xzssh test`, or `xzssh remove` to autocomplete
+from your configured aliases — no need to remember them.
+
+```bash
+# install the optional dep
+pip install 'xzssh[completion]'
+
+# one-line shell hook (bash/zsh):
+eval "$(register-python-argcomplete xzssh)"
+
+# add it to your ~/.bashrc or ~/.zshrc so it sticks across sessions.
+# fish users:
+register-python-argcomplete --shell fish xzssh | source
+```
+
+The completion shim is a no-op when argcomplete isn't installed; the
+rest of the CLI works exactly as before.
+
 ### ⌨️ Interactive Usage
 
 Simply run `xzssh` without any arguments to enter the interactive dashboard. Use arrow keys to navigate or press single-key shortcuts (e.g., `c` to connect, `a` to add).
