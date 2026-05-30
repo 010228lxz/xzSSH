@@ -93,11 +93,17 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 
 | Command | Description |
 | :--- | :--- |
-| `list` | Display all configured hosts in a styled table. |
-| `connect [alias]` | Quickly connect to a host via alias or fuzzy search. |
-| `add` | Interactively add a new host entry. |
-| `remove [alias...]` | Remove one or more hosts by alias. |
-| `import [file]` | Import host entries from an existing SSH config. |
+| `list [--tag T]` | Display all configured hosts in a styled table (filter by tag). |
+| `connect [alias]` | Quickly connect to a host via alias or fuzzy search (`--dry-run` to preview). |
+| `which <alias>` | Print the resolved `ssh` command line without running it. |
+| `search <query>` | Search hosts by alias, hostname, user, tag, or proxy-jump. |
+| `test [alias]` | Probe connectivity (`--all` for every host) without opening a shell. |
+| `add` | Add a host — interactively, or via flags (`--proxy-jump`, `--tag`, forwards, …). |
+| `edit <alias>` | Edit a host's JSON entry in `$EDITOR`, re-validated on save. |
+| `remove [alias...]` | Remove one or more hosts by alias (`--dry-run` to preview). |
+| `import [file]` | Import host entries from an existing OpenSSH config. |
+| `export` | Print a JSON snapshot of the config (for backup). |
+| `import-json <file>` | Restore the config from a JSON snapshot (`--merge` / `--replace`). |
 | `check` | Analyze configuration for errors or port conflicts. |
 | `generate` | Regenerate the final `~/.ssh/config` file. |
 | `key` | Manage private keys and integrate with `ssh-agent`. |

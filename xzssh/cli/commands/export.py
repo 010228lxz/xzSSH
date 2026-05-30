@@ -16,6 +16,7 @@ from pathlib import Path
 
 from xzssh.cli.helpers import load_config_or_error
 from xzssh.cli.ui import print_error, print_success
+from xzssh.platform import ensure_secure_file_permissions
 
 
 def run(args: argparse.Namespace, config_path: Path) -> int:
@@ -31,6 +32,9 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         try:
             out_path.parent.mkdir(parents=True, exist_ok=True)
             out_path.write_text(payload, encoding="utf-8")
+            # The snapshot holds the same secret content (hostnames, key
+            # paths) as xzssh.json — apply the same 0600 / ACL posture.
+            ensure_secure_file_permissions(out_path)
         except OSError as exc:
             print_error(f"Failed to write export to {out_path}: {exc}")
             return 1

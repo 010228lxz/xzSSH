@@ -66,14 +66,28 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v4
+
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
           path: artifacts
 
+      - name: Extract release notes for this tag
+        run: |
+          # Populate the Release body with just this version's CHANGELOG
+          # section. Fall back to a pointer if extraction fails for any reason.
+          if python3 scripts/extract_changelog.py "${GITHUB_REF_NAME}" > RELEASE_NOTES.md; then
+            echo "Extracted notes for ${GITHUB_REF_NAME}:"
+            cat RELEASE_NOTES.md
+          else
+            echo "See [CHANGELOG.md](CHANGELOG.md) for release notes." > RELEASE_NOTES.md
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          body_path: RELEASE_NOTES.md
           files: |
             artifacts/xzssh-linux/xzssh-linux
             artifacts/xzssh-windows.exe/xzssh-windows.exe

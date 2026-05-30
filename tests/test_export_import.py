@@ -7,9 +7,18 @@ back up the existing config on --replace.
 from __future__ import annotations
 
 import json
+import os
+import stat
 from pathlib import Path
 
+import pytest
+
 from xzssh.cli.main import main
+
+
+posix_only = pytest.mark.skipif(
+    os.name != "posix", reason="POSIX permission semantics"
+)
 
 
 def _seed(config_path: Path, alias: str, hostname: str, *extra: str) -> None:
@@ -56,6 +65,19 @@ def test_export_to_file(tmp_path: Path) -> None:
 def test_export_missing_config_returns_one(tmp_path: Path) -> None:
     rc = main(["export", "--config", str(tmp_path / "absent.json")])
     assert rc == 1
+
+
+@posix_only
+def test_export_file_is_0600(tmp_path: Path) -> None:
+    """The snapshot holds the same secret content as xzssh.json → 0600."""
+    config_path = tmp_path / "xzssh.json"
+    backup = tmp_path / "backup.json"
+    _seed(config_path, "db", "db.example.com")
+
+    main(["export", "--config", str(config_path), "--output", str(backup)])
+
+    mode = stat.S_IMODE(backup.stat().st_mode)
+    assert mode == 0o600, f"expected 0o600, got {oct(mode)}"
 
 
 def test_export_roundtrips_through_load(tmp_path: Path, capsys) -> None:
