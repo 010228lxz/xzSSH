@@ -13,6 +13,7 @@ from xzssh.cli.commands import (
     list_ as list_cmd,
     menu as menu_cmd,
     remove as remove_cmd,
+    search as search_cmd,
     test as test_cmd,
     which as which_cmd,
 )
@@ -53,6 +54,8 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.command == "which":
         return which_cmd.run(args, config_path)
+    if args.command == "search":
+        return search_cmd.run(args, config_path)
     if args.command == "list":
         return list_cmd.run(
             config_path,

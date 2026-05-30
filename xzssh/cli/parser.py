@@ -127,6 +127,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     which_alias.completer = alias_completer  # type: ignore[attr-defined]
 
+    search_parser = subparsers.add_parser(
+        "search",
+        parents=[parent],
+        help="Search hosts by alias, hostname, user, tag, or proxy-jump",
+    )
+    search_parser.add_argument(
+        "query", help="Case-insensitive substring to search for"
+    )
+
     test_parser = subparsers.add_parser(
         "test",
         parents=[parent],

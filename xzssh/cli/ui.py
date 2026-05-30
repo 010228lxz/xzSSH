@@ -316,6 +316,7 @@ def print_help():
         ("list", "List all configured hosts in a table"),
         ("connect [alias]", "Quickly connect to a host"),
         ("which <alias>", "Print the resolved ssh command without running it"),
+        ("search <query>", "Search hosts by alias, hostname, user, or tag"),
         ("test [alias]", "Probe connectivity without opening a shell"),
         ("add", "Interactively add a new host"),
         ("remove [alias...]", "Remove one or more hosts by alias"),
