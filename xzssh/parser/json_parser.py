@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from xzssh.model import Config, Host, LocalForward
+from xzssh.model import Config, Host, LocalForward, RemoteForward
 
 
 class ConfigParseError(ValueError):
@@ -69,8 +69,16 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
     port = _optional_int(data, "port")
     identity_file = _optional_str(data, "identity_file")
     proxy_jump = _optional_str(data, "proxy_jump")
+    forward_agent = _optional_bool(data, "forward_agent", f"hosts[{idx}].forward_agent")
+    compression = _optional_bool(data, "compression", f"hosts[{idx}].compression")
+    server_alive_interval = _optional_int(data, "server_alive_interval")
+    identities_only = _optional_bool(
+        data, "identities_only", f"hosts[{idx}].identities_only"
+    )
+    strict_host_key_checking = _optional_str(data, "strict_host_key_checking")
+    user_known_hosts_file = _optional_str(data, "user_known_hosts_file")
     last_used = _optional_str(data, "last_used")
-    
+
     tags_value = data.get("tags", [])
     if tags_value is None:
         tags_value = []
@@ -94,6 +102,34 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
             )
         local_forwards.append(_parse_local_forward(lf_data, idx, lf_idx))
 
+    remote_forwards_value = data.get("remote_forwards", [])
+    if remote_forwards_value is None:
+        remote_forwards_value = []
+    if not isinstance(remote_forwards_value, list):
+        raise ConfigParseError(
+            f"hosts[{idx}].remote_forwards must be a list if provided"
+        )
+
+    remote_forwards: List[RemoteForward] = []
+    for rf_idx, rf_data in enumerate(remote_forwards_value):
+        if not isinstance(rf_data, dict):
+            raise ConfigParseError(
+                f"hosts[{idx}].remote_forwards[{rf_idx}] must be an object"
+            )
+        remote_forwards.append(_parse_remote_forward(rf_data, idx, rf_idx))
+
+    dynamic_forwards_value = data.get("dynamic_forwards", [])
+    if dynamic_forwards_value is None:
+        dynamic_forwards_value = []
+    if not isinstance(dynamic_forwards_value, list):
+        raise ConfigParseError(
+            f"hosts[{idx}].dynamic_forwards must be a list if provided"
+        )
+    dynamic_forwards = [
+        _coerce_int(v, f"hosts[{idx}].dynamic_forwards[{df_idx}]")
+        for df_idx, v in enumerate(dynamic_forwards_value)
+    ]
+
     return Host(
         alias=alias,
         host_name=host_name,
@@ -101,7 +137,15 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
         port=port,
         identity_file=identity_file,
         proxy_jump=proxy_jump,
+        forward_agent=forward_agent,
+        compression=compression,
+        server_alive_interval=server_alive_interval,
+        identities_only=identities_only,
+        strict_host_key_checking=strict_host_key_checking,
+        user_known_hosts_file=user_known_hosts_file,
         local_forwards=local_forwards,
+        remote_forwards=remote_forwards,
+        dynamic_forwards=dynamic_forwards,
         tags=tags,
         last_used=last_used,
     )
@@ -124,6 +168,26 @@ def _parse_local_forward(
         local_port=local_port,
         remote_host=remote_host,
         remote_port=remote_port,
+    )
+
+
+def _parse_remote_forward(
+    data: Dict[str, Any], host_idx: int, rf_idx: int
+) -> RemoteForward:
+    remote_port = _require_int(
+        data, "remote_port", f"hosts[{host_idx}].remote_forwards[{rf_idx}].remote_port"
+    )
+    local_host = _require_str(
+        data, "local_host", f"hosts[{host_idx}].remote_forwards[{rf_idx}].local_host"
+    )
+    local_port = _require_int(
+        data, "local_port", f"hosts[{host_idx}].remote_forwards[{rf_idx}].local_port"
+    )
+
+    return RemoteForward(
+        remote_port=remote_port,
+        local_host=local_host,
+        local_port=local_port,
     )
 
 
@@ -159,6 +223,17 @@ def _optional_int(data: Dict[str, Any], key: str) -> Optional[int]:
     if value is None:
         return None
     return _coerce_int(value, key)
+
+
+def _optional_bool(data: Dict[str, Any], key: str, label: str) -> Optional[bool]:
+    if key not in data:
+        return None
+    value = data[key]
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    raise ConfigParseError(f"Field '{label}' must be a boolean (true/false)")
 
 
 def _coerce_int(value: Any, label: str) -> int:

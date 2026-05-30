@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from xzssh.cli.ui import print_error
-from xzssh.model import Config, Host, LocalForward
+from xzssh.model import Config, Host, LocalForward, RemoteForward
 from xzssh.parser import ConfigParseError, load_config
 from xzssh.platform import ensure_secure_file_permissions, resolve_path
 
@@ -50,6 +50,30 @@ def parse_local_forward_arg(raw: str) -> LocalForward:
         local_port=local_port,
         remote_host=remote_host,
         remote_port=remote_port,
+    )
+
+
+def parse_remote_forward_arg(raw: str) -> RemoteForward:
+    parts = raw.split(":", 2)
+    if len(parts) != 3:
+        raise ValueError(
+            "Invalid --remote-forward value. Expected remote_port:local_host:local_port"
+        )
+    remote_port_str, local_host, local_port_str = parts
+    if not local_host:
+        raise ValueError(
+            "Invalid --remote-forward value. local_host must be non-empty"
+        )
+    try:
+        remote_port = int(remote_port_str)
+        local_port = int(local_port_str)
+    except ValueError as exc:
+        raise ValueError("RemoteForward ports must be integers") from exc
+
+    return RemoteForward(
+        remote_port=remote_port,
+        local_host=local_host,
+        local_port=local_port,
     )
 
 
@@ -113,6 +137,11 @@ def build_ssh_command(
         args.extend(["-i", host.identity_file])
     if host.proxy_jump:
         args.extend(["-J", host.proxy_jump])
+    # Scalar ssh options become `-o Key=value`. Forwards are deliberately
+    # NOT injected here — they belong in the generated config, not in an
+    # interactive connect/which/test command line.
+    for key, value in _scalar_ssh_options(host):
+        args.extend(["-o", f"{key}={value}"])
     if extra_options:
         args.extend(extra_options)
     target = host.host_name
@@ -120,3 +149,19 @@ def build_ssh_command(
         target = f"{host.user}@{target}"
     args.append(target)
     return args
+
+
+def _scalar_ssh_options(host: Host):
+    """Yield (ssh_option, value) pairs for the host's scalar SSH settings."""
+    if host.forward_agent is not None:
+        yield "ForwardAgent", "yes" if host.forward_agent else "no"
+    if host.compression is not None:
+        yield "Compression", "yes" if host.compression else "no"
+    if host.server_alive_interval is not None:
+        yield "ServerAliveInterval", str(host.server_alive_interval)
+    if host.identities_only is not None:
+        yield "IdentitiesOnly", "yes" if host.identities_only else "no"
+    if host.strict_host_key_checking is not None:
+        yield "StrictHostKeyChecking", host.strict_host_key_checking
+    if host.user_known_hosts_file is not None:
+        yield "UserKnownHostsFile", host.user_known_hosts_file

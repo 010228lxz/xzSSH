@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import argparse
 import shlex
+import sys
 from pathlib import Path
 
 from xzssh.cli.helpers import build_ssh_command, load_config_or_error
-from xzssh.cli.ui import console, print_error
+from xzssh.cli.ui import print_error
 
 
 def run(args: argparse.Namespace, config_path: Path) -> int:
@@ -35,7 +36,8 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
 
     ssh_args = build_ssh_command(host)
     # shlex.join quotes anything that would otherwise break a shell paste
-    # (spaces in paths, etc.). Print raw — no rich markup — so redirection
-    # captures exactly the command and nothing else.
-    console.print(shlex.join(ssh_args), markup=False, highlight=False)
+    # (spaces in paths, etc.). Write straight to stdout — bypass rich so a
+    # long command line is never soft-wrapped, which would inject a newline
+    # mid-command and break `$(xzssh which db)`.
+    sys.stdout.write(shlex.join(ssh_args) + "\n")
     return 0

@@ -7,6 +7,7 @@ from typing import List
 from xzssh.cli.helpers import (
     load_config_if_exists,
     parse_local_forward_arg,
+    parse_remote_forward_arg,
     write_config,
 )
 from xzssh.cli.ui import (
@@ -17,7 +18,7 @@ from xzssh.cli.ui import (
     prompt_host_details,
     status,
 )
-from xzssh.model import Config, Host, LocalForward
+from xzssh.model import Config, Host, LocalForward, RemoteForward
 from xzssh.validator import validate_config
 
 
@@ -48,6 +49,14 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
             print_error(str(exc))
             return 2
 
+    remote_forwards: List[RemoteForward] = []
+    for raw in getattr(args, "remote_forward", []) or []:
+        try:
+            remote_forwards.append(parse_remote_forward_arg(raw))
+        except ValueError as exc:
+            print_error(str(exc))
+            return 2
+
     new_host = Host(
         alias=args.alias,
         host_name=args.host_name,
@@ -55,7 +64,15 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         port=args.port,
         identity_file=args.identity_file,
         proxy_jump=getattr(args, "proxy_jump", None),
+        forward_agent=getattr(args, "forward_agent", None),
+        compression=getattr(args, "compression", None),
+        server_alive_interval=getattr(args, "server_alive_interval", None),
+        identities_only=getattr(args, "identities_only", None),
+        strict_host_key_checking=getattr(args, "strict_host_key_checking", None),
+        user_known_hosts_file=getattr(args, "user_known_hosts_file", None),
         local_forwards=local_forwards,
+        remote_forwards=remote_forwards,
+        dynamic_forwards=list(getattr(args, "dynamic_forward", []) or []),
         tags=args.tag,
     )
 

@@ -1,3 +1,3 @@
-from .types import Config, Host, LocalForward
+from .types import Config, Host, LocalForward, RemoteForward
 
-__all__ = ["Config", "Host", "LocalForward"]
+__all__ = ["Config", "Host", "LocalForward", "RemoteForward"]

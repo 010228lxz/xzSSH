@@ -94,6 +94,57 @@ def build_parser() -> argparse.ArgumentParser:
         help="local_port:remote_host:remote_port",
     )
     add_parser.add_argument(
+        "--remote-forward",
+        action="append",
+        default=[],
+        help="remote_port:local_host:local_port",
+    )
+    add_parser.add_argument(
+        "--dynamic-forward",
+        action="append",
+        default=[],
+        type=int,
+        metavar="PORT",
+        help="Local SOCKS proxy port (repeatable)",
+    )
+    add_parser.add_argument(
+        "--forward-agent",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable ssh-agent forwarding (ForwardAgent)",
+    )
+    add_parser.add_argument(
+        "--compression",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable compression (Compression)",
+    )
+    add_parser.add_argument(
+        "--identities-only",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Only use the configured IdentityFile (IdentitiesOnly)",
+    )
+    add_parser.add_argument(
+        "--server-alive-interval",
+        type=int,
+        default=None,
+        metavar="SECONDS",
+        help="Keepalive interval in seconds (ServerAliveInterval)",
+    )
+    add_parser.add_argument(
+        "--strict-host-key-checking",
+        choices=["yes", "no", "ask", "accept-new", "off"],
+        default=None,
+        help="StrictHostKeyChecking policy",
+    )
+    add_parser.add_argument(
+        "--user-known-hosts-file",
+        default=None,
+        metavar="PATH",
+        help="Path for UserKnownHostsFile",
+    )
+    add_parser.add_argument(
         "--replace",
         action="store_true",
         help="Replace existing host with the same alias",

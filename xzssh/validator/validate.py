@@ -8,6 +8,11 @@ from xzssh.model import Config, Host, LocalForward
 from xzssh.platform import check_private_key_permissions, resolve_path
 
 
+# Accepted values for ssh's StrictHostKeyChecking (includes `off`, an alias
+# for `no`, which ssh itself accepts).
+STRICT_HOST_KEY_CHECKING_VALUES = {"yes", "no", "ask", "accept-new", "off"}
+
+
 @dataclass
 class ValidationResult:
     errors: List[str] = field(default_factory=list)
@@ -90,6 +95,22 @@ def _validate_host(
             f"hosts[{idx}].proxy_jump must be a non-empty string if provided"
         )
 
+    if host.server_alive_interval is not None:
+        if (
+            not isinstance(host.server_alive_interval, int)
+            or host.server_alive_interval < 0
+        ):
+            result.errors.append(
+                f"hosts[{idx}].server_alive_interval must be a non-negative integer"
+            )
+
+    if host.strict_host_key_checking is not None:
+        if host.strict_host_key_checking not in STRICT_HOST_KEY_CHECKING_VALUES:
+            allowed = ", ".join(sorted(STRICT_HOST_KEY_CHECKING_VALUES))
+            result.errors.append(
+                f"hosts[{idx}].strict_host_key_checking must be one of: {allowed}"
+            )
+
     host_label = _host_label(host)
     for lf_idx, local_forward in enumerate(host.local_forwards):
         _validate_local_forward(
@@ -100,6 +121,33 @@ def _validate_host(
             result,
             local_port_map,
             used_ports,
+        )
+
+    for rf_idx, remote_forward in enumerate(host.remote_forwards):
+        _validate_port(
+            remote_forward.remote_port,
+            f"hosts[{idx}].remote_forwards[{rf_idx}].remote_port",
+            result.errors,
+        )
+        _validate_port(
+            remote_forward.local_port,
+            f"hosts[{idx}].remote_forwards[{rf_idx}].local_port",
+            result.errors,
+        )
+        if (
+            not isinstance(remote_forward.local_host, str)
+            or not remote_forward.local_host.strip()
+        ):
+            result.errors.append(
+                f"hosts[{idx}].remote_forwards[{rf_idx}].local_host "
+                "must be a non-empty string"
+            )
+
+    for df_idx, dynamic_port in enumerate(host.dynamic_forwards):
+        _validate_port(
+            dynamic_port,
+            f"hosts[{idx}].dynamic_forwards[{df_idx}]",
+            result.errors,
         )
 
 

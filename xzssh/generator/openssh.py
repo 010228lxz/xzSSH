@@ -25,14 +25,41 @@ def render_openssh(config: Config, source_path: Path) -> str:
             lines.append(f"  IdentityFile {resolved}")
         if host.proxy_jump is not None:
             lines.append(f"  ProxyJump {host.proxy_jump}")
+        if host.forward_agent is not None:
+            lines.append(f"  ForwardAgent {_yes_no(host.forward_agent)}")
+        if host.compression is not None:
+            lines.append(f"  Compression {_yes_no(host.compression)}")
+        if host.server_alive_interval is not None:
+            lines.append(f"  ServerAliveInterval {host.server_alive_interval}")
+        if host.identities_only is not None:
+            lines.append(f"  IdentitiesOnly {_yes_no(host.identities_only)}")
+        if host.strict_host_key_checking is not None:
+            lines.append(
+                f"  StrictHostKeyChecking {host.strict_host_key_checking}"
+            )
+        if host.user_known_hosts_file is not None:
+            lines.append(f"  UserKnownHostsFile {host.user_known_hosts_file}")
         for local_forward in host.local_forwards:
             lines.append(
                 "  LocalForward "
                 f"{local_forward.local_port} "
                 f"{local_forward.remote_host}:{local_forward.remote_port}"
             )
+        for remote_forward in host.remote_forwards:
+            lines.append(
+                "  RemoteForward "
+                f"{remote_forward.remote_port} "
+                f"{remote_forward.local_host}:{remote_forward.local_port}"
+            )
+        for dynamic_port in host.dynamic_forwards:
+            lines.append(f"  DynamicForward {dynamic_port}")
 
     return "\n".join(lines) + "\n"
+
+
+def _yes_no(value: bool) -> str:
+    """Render a Python bool as the ssh_config token ``yes`` / ``no``."""
+    return "yes" if value else "no"
 
 
 def resolve_identity_file(identity_file: str, source_path: Path) -> str:

@@ -87,6 +87,28 @@ def test_which_does_not_modify_config(tmp_path: Path) -> None:
     assert "last_used" not in db
 
 
+def test_which_long_command_stays_single_line(tmp_path: Path, capsys) -> None:
+    """A command well past 80 columns must NOT be wrapped — rich soft-wrap
+    would inject a newline mid-command and break $(xzssh which host)."""
+    config_path = tmp_path / "xzssh.json"
+    main([
+        "add", "--config", str(config_path),
+        "--alias", "loaded", "--host-name", "very-long-hostname.internal.example.com",
+        "--user", "deployment-service-account",
+        "--forward-agent", "--compression", "--identities-only",
+        "--server-alive-interval", "30",
+        "--strict-host-key-checking", "accept-new",
+        "--user-known-hosts-file", "/home/me/.ssh/known_hosts_work",
+    ])
+    capsys.readouterr()
+
+    main(["which", "--config", str(config_path), "loaded"])
+    out = capsys.readouterr().out
+    # Exactly one line of output — no soft-wrap newline in the middle.
+    assert out.count("\n") == 1
+    assert len(out) > 80  # genuinely a long line, so the test has teeth
+
+
 def test_which_output_is_shell_safe(tmp_path: Path, capsys) -> None:
     """A hostname/identity with a space must be quoted so the line is paste-safe."""
     config_path = tmp_path / "xzssh.json"
