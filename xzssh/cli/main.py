@@ -7,8 +7,10 @@ from xzssh.cli.commands import (
     add as add_cmd,
     check as check_cmd,
     connect as connect_cmd,
+    export as export_cmd,
     generate as generate_cmd,
     import_ as import_cmd,
+    import_json as import_json_cmd,
     key as key_cmd,
     list_ as list_cmd,
     menu as menu_cmd,
@@ -56,6 +58,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return which_cmd.run(args, config_path)
     if args.command == "search":
         return search_cmd.run(args, config_path)
+    if args.command == "export":
+        return export_cmd.run(args, config_path)
+    if args.command == "import-json":
+        return import_json_cmd.run(args, config_path)
     if args.command == "list":
         return list_cmd.run(
             config_path,

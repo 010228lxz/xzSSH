@@ -321,6 +321,8 @@ def print_help():
         ("add", "Interactively add a new host"),
         ("remove [alias...]", "Remove one or more hosts by alias"),
         ("import [file]", "Import from SSH config"),
+        ("export", "Print a JSON snapshot of the config"),
+        ("import-json <file>", "Restore config from a JSON snapshot"),
         ("check", "Analyze configuration for errors"),
         ("generate", "Generate ~/.ssh/config"),
         ("menu", "Open interactive management menu"),

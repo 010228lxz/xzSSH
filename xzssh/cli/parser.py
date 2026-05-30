@@ -117,6 +117,36 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("check", parents=[parent], help="Validate config")
 
+    export_parser = subparsers.add_parser(
+        "export",
+        parents=[parent],
+        help="Print a JSON snapshot of the config (for backup)",
+    )
+    export_parser.add_argument(
+        "--output",
+        help="Write the snapshot to this file instead of stdout",
+    )
+
+    import_json_parser = subparsers.add_parser(
+        "import-json",
+        parents=[parent],
+        help="Restore the config from a JSON snapshot produced by export",
+    )
+    import_json_parser.add_argument(
+        "file", help="Path to the JSON snapshot to import"
+    )
+    import_json_mode = import_json_parser.add_mutually_exclusive_group()
+    import_json_mode.add_argument(
+        "--merge",
+        action="store_true",
+        help="Add new hosts/keys, keep existing on alias conflict (default)",
+    )
+    import_json_mode.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace the whole config with the snapshot (a .bak is saved first)",
+    )
+
     which_parser = subparsers.add_parser(
         "which",
         parents=[parent],
