@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import shlex
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
@@ -65,12 +67,23 @@ def run(
         print_error(f"Host not found: {alias}")
         return 1
 
+    ssh_args = build_ssh_command(host)
+
+    # getattr (not args.dry_run): the interactive menus call run() with a
+    # hand-built Namespace that has no dry_run attribute.
+    if getattr(args, "dry_run", False):
+        print_info(
+            f"--dry-run: would connect to [bold]{alias}[/bold] "
+            f"({host.user or 'default'}@{host.host_name}). No connection made."
+        )
+        # The command on its own clean line, bypassing rich so it isn't wrapped.
+        sys.stdout.write(shlex.join(ssh_args) + "\n")
+        return 0
+
     print_info(
         f"Connecting to [bold]{alias}[/bold] "
         f"({host.user or 'default'}@{host.host_name})..."
     )
-
-    ssh_args = build_ssh_command(host)
 
     returncode = 0
     try:

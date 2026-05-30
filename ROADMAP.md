@@ -32,72 +32,25 @@ now the single source of truth for ssh argv construction — reused by
 
 ---
 
-## Tier 2 — Clear wins
+## Tier 2 — Shipped ✅
 
-Lower urgency, but each is a clean small-to-medium change that fits the
-architecture.
+All Tier 2 items have shipped — see [CHANGELOG.md](CHANGELOG.md) for
+the version each one landed in:
 
-### `xzssh edit <alias>` — `[M]`
+- ✅ `xzssh which <alias>` (resolved ssh command) — **v0.5.0**
+- ✅ `xzssh search <query>` (alias/host/user/tag/proxy) — **v0.6.0**
+- ✅ JSON export / import-json (backup & restore) — **v0.7.0**
+- ✅ `xzssh edit <alias>` (`$EDITOR` round-trip) — **v0.8.0**
+- ✅ More SSH fields on `Host` (RemoteForward, DynamicForward,
+  ForwardAgent, Compression, ServerAliveInterval, IdentitiesOnly,
+  StrictHostKeyChecking, UserKnownHostsFile) — **v0.9.0**
+- ✅ `xzssh connect --dry-run` + `add --tag` prompt-path verified —
+  **v0.10.0**
 
-Open the host's JSON entry in `$EDITOR`, re-validate on save. Currently
-the only ways to change a host are `--replace` (full rewrite via flags)
-or remove-then-add.
-
-- Extract the host's `to_dict()`, write to a temp file, `subprocess.run([EDITOR, tmp])`.
-- On editor exit, load + validate the edited JSON against the schema.
-- If valid: splice back into the config and `write_config`.
-- If invalid: print errors, keep the original.
-
-### `xzssh which <alias>` — `[S]`
-
-Print the resolved `ssh` command line without running it. Debug aid for
-verifying ProxyJump / IdentityFile resolution.
-
-- Reuses the `_build_ssh_args` logic from [connect.py](xzssh/cli/commands/connect.py).
-- One-liner output: `ssh -i ~/.ssh/id_ed25519 -p 2222 alice@db.example.com`.
-
-### More SSH fields on `Host` — `[M]`
-
-Once `ProxyJump` is in, the rest of these become single-field additions
-with one generator line each. Pick a subset based on demand.
-
-- `RemoteForward`, `DynamicForward` (symmetric with the existing `LocalForward`).
-- `ForwardAgent: bool`
-- `Compression: bool`
-- `ServerAliveInterval: int`
-- `IdentitiesOnly: bool`
-- `StrictHostKeyChecking: str` (yes / no / ask / accept-new)
-- `UserKnownHostsFile: str`
-
-The pattern is mechanical: model field, parser type-check, validator
-constraint if any, generator emit, importer pickup, `--flag` on
-[add.py](xzssh/cli/commands/add.py), questionary prompt.
-
-### JSON export / import for backup — `[S]`
-
-- `xzssh export > backup.json` — pretty-printed snapshot.
-- `xzssh import-json backup.json --merge|--replace` — restore from snapshot.
-- Already mostly there: `Config.to_dict()` and `load_config` exist. Just
-  needs two thin CLI commands and `--merge` semantics for conflict
-  resolution.
-
-### `xzssh connect --dry-run` — `[S]`
-
-Already have `--dry-run` on `generate` and `remove`. The
-last-destructive-without-dry-run is technically `connect` (it stamps
-`last_used`). Probably not worth the flag, but cheap to add for
-consistency.
-
-### `--tag` on `add` / `key add` for bulk classification — `[S]`
-
-Already exists on `add` (`--tag` repeatable). Worth verifying the
-prompt-driven path also captures tags cleanly.
-
-### `xzssh search <query>` — `[S]`
-
-Currently the only fuzzy search is in `connect`. A standalone
-`xzssh search prod-db` that searches alias + hostname + user + tags
-and prints matches is useful outside the connect flow.
+Note on the `--tag on key add` sub-item: keys are a simple
+`name → path` dict with no tag field, so "tag a key" was out of scope;
+the item reduced to verifying `add --tag` works in both the flag and
+prompt paths, which is now locked in by tests.
 
 ---
 

@@ -183,3 +183,54 @@ def test_connect_explicit_alias_ignores_tag_filter(monkeypatch, tmp_path: Path) 
     assert exit_code == 0
     assert len(subprocess_calls) == 1
     assert any("db.prod.example.com" in arg for arg in subprocess_calls[0])
+
+
+# ---------------------------------------------------------------------------
+# add --tag: both the flag form and the interactive prompt form must capture
+# tags (ROADMAP Tier 2 "verify the prompt-driven path").
+# ---------------------------------------------------------------------------
+
+def test_add_tag_flag_persists(tmp_path: Path) -> None:
+    config_path = tmp_path / "xzssh.json"
+    main(
+        [
+            "add", "--config", str(config_path),
+            "--alias", "db", "--host-name", "db.example.com",
+            "--tag", "prod", "--tag", "db",
+        ]
+    )
+    import json
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    db = next(h for h in data["hosts"] if h["alias"] == "db")
+    assert set(db["tags"]) == {"prod", "db"}
+
+
+def test_add_interactive_prompt_captures_tags(monkeypatch, tmp_path: Path) -> None:
+    """The questionary `add` flow must persist the tags it collects."""
+    import json
+
+    config_path = tmp_path / "xzssh.json"
+
+    # Stand in for the interactive wizard, returning a host with two tags.
+    monkeypatch.setattr(
+        "xzssh.cli.commands.add.prompt_host_details",
+        lambda *a, **k: {
+            "alias": "wiz",
+            "host_name": "wiz.example.com",
+            "user": None,
+            "port": None,
+            "identity_file": None,
+            "proxy_jump": None,
+            "tags": ["staging", "web"],
+            "local_forwards": [],
+        },
+    )
+
+    # No --alias/--host-name → triggers the prompt path.
+    rc = main(["add", "--config", str(config_path)])
+    assert rc == 0
+
+    data = json.loads(config_path.read_text(encoding="utf-8"))
+    wiz = next(h for h in data["hosts"] if h["alias"] == "wiz")
+    assert set(wiz["tags"]) == {"staging", "web"}

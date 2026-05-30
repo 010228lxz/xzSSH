@@ -64,6 +64,12 @@ def build_parser() -> argparse.ArgumentParser:
             " OR semantics; has no effect when <alias> is given explicitly)"
         ),
     )
+    connect_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the ssh command that would run, without connecting or "
+        "stamping last_used",
+    )
 
     subparsers.add_parser("menu", parents=[parent], help="Open interactive management menu")
 
