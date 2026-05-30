@@ -67,6 +67,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("menu", parents=[parent], help="Open interactive management menu")
 
+    edit_parser = subparsers.add_parser(
+        "edit", parents=[parent], help="Edit a host's JSON entry in $EDITOR"
+    )
+    edit_alias = edit_parser.add_argument(
+        "alias", help="Alias of the host to edit"
+    )
+    edit_alias.completer = alias_completer  # type: ignore[attr-defined]
+
     add_parser = subparsers.add_parser("add", parents=[parent], help="Add a host")
     add_parser.add_argument("--alias")
     add_parser.add_argument("--host-name")

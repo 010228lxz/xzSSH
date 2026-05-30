@@ -7,6 +7,7 @@ from xzssh.cli.commands import (
     add as add_cmd,
     check as check_cmd,
     connect as connect_cmd,
+    edit as edit_cmd,
     export as export_cmd,
     generate as generate_cmd,
     import_ as import_cmd,
@@ -79,6 +80,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return menu_cmd.main_menu(config_path, args.suggest_ports)
     if args.command == "add":
         return add_cmd.run(args, config_path)
+    if args.command == "edit":
+        return edit_cmd.run(args, config_path)
     if args.command == "remove":
         return remove_cmd.run(args, config_path)
     if args.command == "import":

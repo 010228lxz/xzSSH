@@ -319,6 +319,7 @@ def print_help():
         ("search <query>", "Search hosts by alias, hostname, user, or tag"),
         ("test [alias]", "Probe connectivity without opening a shell"),
         ("add", "Interactively add a new host"),
+        ("edit <alias>", "Edit a host's JSON entry in $EDITOR"),
         ("remove [alias...]", "Remove one or more hosts by alias"),
         ("import [file]", "Import from SSH config"),
         ("export", "Print a JSON snapshot of the config"),
