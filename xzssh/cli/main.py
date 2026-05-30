@@ -14,6 +14,7 @@ from xzssh.cli.commands import (
     menu as menu_cmd,
     remove as remove_cmd,
     test as test_cmd,
+    which as which_cmd,
 )
 from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
@@ -43,8 +44,15 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command is None:
         return menu_cmd.default_menu(config_path, args.suggest_ports)
 
-    print_banner()
+    # Commands whose stdout is meant to be captured or piped must NOT emit
+    # the decorative banner — it would corrupt redirected output (e.g.
+    # `xzssh export > backup.json`, `$(xzssh which db)`).
+    QUIET_COMMANDS = {"which", "search", "export"}
+    if args.command not in QUIET_COMMANDS:
+        print_banner()
 
+    if args.command == "which":
+        return which_cmd.run(args, config_path)
     if args.command == "list":
         return list_cmd.run(
             config_path,

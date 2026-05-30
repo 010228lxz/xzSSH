@@ -315,6 +315,8 @@ def print_help():
     commands = [
         ("list", "List all configured hosts in a table"),
         ("connect [alias]", "Quickly connect to a host"),
+        ("which <alias>", "Print the resolved ssh command without running it"),
+        ("test [alias]", "Probe connectivity without opening a shell"),
         ("add", "Interactively add a new host"),
         ("remove [alias...]", "Remove one or more hosts by alias"),
         ("import [file]", "Import from SSH config"),

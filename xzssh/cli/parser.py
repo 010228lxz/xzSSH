@@ -117,6 +117,16 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers.add_parser("check", parents=[parent], help="Validate config")
 
+    which_parser = subparsers.add_parser(
+        "which",
+        parents=[parent],
+        help="Print the resolved ssh command line for a host without running it",
+    )
+    which_alias = which_parser.add_argument(
+        "alias", help="Alias of the host to resolve"
+    )
+    which_alias.completer = alias_completer  # type: ignore[attr-defined]
+
     test_parser = subparsers.add_parser(
         "test",
         parents=[parent],
