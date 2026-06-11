@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import argparse
 
-from xzssh.cli.completion import alias_completer, key_completer
+from xzssh.cli.completion import (
+    alias_completer,
+    key_completer,
+    profile_completer,
+)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -11,6 +15,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
     )
+    parent_profile = parent.add_argument(
+        "--profile",
+        metavar="NAME",
+        help="Use a registered profile's config file (see `xzssh profile`)",
+    )
+    parent_profile.completer = profile_completer  # type: ignore[attr-defined]
     parent.add_argument(
         "--suggest-ports",
         action="store_true",
@@ -22,6 +32,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--config",
         help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
     )
+    top_profile = parser.add_argument(
+        "--profile",
+        metavar="NAME",
+        help="Use a registered profile's config file (see `xzssh profile`)",
+    )
+    top_profile.completer = profile_completer  # type: ignore[attr-defined]
     parser.add_argument(
         "--suggest-ports",
         action="store_true",
@@ -273,6 +289,48 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Print the would-be output to stdout and exit without writing",
     )
+
+    profile_parser = subparsers.add_parser(
+        "profile", parents=[parent], help="Manage config profiles"
+    )
+    profile_subparsers = profile_parser.add_subparsers(
+        dest="profile_command", required=False
+    )
+
+    profile_add = profile_subparsers.add_parser(
+        "add", parents=[parent], help="Register a named config file"
+    )
+    profile_add.add_argument("name", help="Profile name (e.g. work)")
+    profile_add.add_argument("path", help="Path to that profile's JSON config")
+    profile_add.add_argument(
+        "--default",
+        action="store_true",
+        dest="set_default",
+        help="Also make this the default profile",
+    )
+    profile_add.add_argument(
+        "--replace",
+        action="store_true",
+        help="Replace an existing profile with the same name",
+    )
+
+    profile_subparsers.add_parser(
+        "list", parents=[parent], help="List registered profiles"
+    )
+
+    profile_use = profile_subparsers.add_parser(
+        "use", parents=[parent], help="Set the default profile"
+    )
+    profile_use_name = profile_use.add_argument("name")
+    profile_use_name.completer = profile_completer  # type: ignore[attr-defined]
+
+    profile_remove = profile_subparsers.add_parser(
+        "remove",
+        parents=[parent],
+        help="Unregister a profile (keeps its config file)",
+    )
+    profile_remove_name = profile_remove.add_argument("name")
+    profile_remove_name.completer = profile_completer  # type: ignore[attr-defined]
 
     key_parser = subparsers.add_parser("key", parents=[parent], help="Manage keys")
     key_subparsers = key_parser.add_subparsers(dest="key_command", required=False)

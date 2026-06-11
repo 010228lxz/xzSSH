@@ -66,17 +66,13 @@ Real design work; would benefit from a spec / RFC before coding.
   are refused. Still on schema v1 — the framework ships ahead of the
   first real break, as planned.
 
-### Multiple profiles — `[M]`
-
-Power users juggle work/personal/client configs. Currently the only
-escape hatch is `--config path/to/other.json`.
-
-- `xzssh profile add work ~/team-ssh.json`
-- `xzssh profile list`
-- `xzssh --profile work connect db`
-- Profile registry at `~/.config/xzssh/profiles.toml` (separate from
-  the SSH-related files).
-- Default profile + per-shell-session override via env var.
+- ✅ Multiple profiles — **v0.12.0**. `xzssh profile
+  add/list/use/remove`, `--profile NAME` on every command,
+  `$XZSSH_PROFILE` session override, default profile in the registry.
+  One deviation from the sketch: the registry is
+  `~/.config/xzssh/profiles.json` (JSON, not TOML — Python 3.9 has no
+  stdlib TOML reader and no version has a writer; the dep tree stays
+  rich + questionary).
 
 ### `xzssh sync` — bidirectional with `~/.ssh/config` — `[L]`
 

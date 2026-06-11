@@ -15,6 +15,7 @@ from xzssh.cli.commands import (
     key as key_cmd,
     list_ as list_cmd,
     menu as menu_cmd,
+    profile as profile_cmd,
     remove as remove_cmd,
     search as search_cmd,
     test as test_cmd,
@@ -22,9 +23,9 @@ from xzssh.cli.commands import (
 )
 from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
-from xzssh.cli.ui import print_banner, print_help
+from xzssh.cli.profiles import ProfileError, registry_path, resolve_config_path
+from xzssh.cli.ui import print_banner, print_error, print_help
 from xzssh.platform import (
-    default_config_path as platform_default_config_path,
     default_output_path as platform_default_output_path,
 )
 
@@ -36,14 +37,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     install_argcomplete(parser)
     args = parser.parse_args(argv)
 
-    config_path = (
-        Path(args.config) if args.config else platform_default_config_path()
-    )
-
     if getattr(args, "help", False):
         print_banner()
         print_help()
         return 0
+
+    # `profile` is dispatched BEFORE config-path resolution: a dangling
+    # default profile must never lock the user out of the very commands
+    # needed to repair the registry.
+    if args.command == "profile":
+        print_banner()
+        if getattr(args, "profile_command", None) is None:
+            print_help()
+            return 0
+        return profile_cmd.run(args, registry_path())
+
+    try:
+        config_path = resolve_config_path(
+            args.config, getattr(args, "profile", None)
+        )
+    except ProfileError as exc:
+        print_error(str(exc))
+        return 2
 
     if args.command is None:
         return menu_cmd.default_menu(config_path, args.suggest_ports)

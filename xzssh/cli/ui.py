@@ -294,6 +294,31 @@ def prompt_select_host(hosts: List[Any], message: str = "Select a host to manage
     
     return prompt_select_action(message, choices, shortcuts)
 
+def print_profile_table(rows: List[Any]):
+    """Prints registered profiles. Rows are (name, path, is_default, exists)."""
+    if not rows:
+        console.print(
+            "[muted]No profiles registered. "
+            "Add one with `xzssh profile add <name> <path>`.[/muted]"
+        )
+        return
+
+    table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold underline")
+    table.add_column("Profile", style="alias", no_wrap=True)
+    table.add_column("Config Path", style="host")
+    table.add_column("Default", style="tag")
+    table.add_column("Exists", style="muted")
+
+    for name, path, is_default, exists in rows:
+        table.add_row(
+            name,
+            path,
+            "[success]✔[/success]" if is_default else "[muted]-[/muted]",
+            "yes" if exists else "[warning]not yet[/warning]",
+        )
+
+    console.print(table)
+
 def print_key_table(keys: dict[str, str]):
     """Prints a styled table of keys."""
     if not keys:
@@ -336,6 +361,7 @@ def print_help():
         ("generate", "Generate ~/.ssh/config"),
         ("menu", "Open interactive management menu"),
         ("key", "Manage private keys and ssh-agent"),
+        ("profile", "Manage config profiles (work/personal/...)"),
     ]
     
     for cmd, desc in commands:
@@ -346,6 +372,7 @@ def print_help():
     console.print("\n[bold]Global Options:[/bold]")
     options = [
         ("--config CONFIG", "Path to JSON config file"),
+        ("--profile NAME", "Use a registered profile's config file"),
         ("--suggest-ports", "Suggest free ports on conflicts"),
         ("-h, --help", "Show this help message and exit"),
     ]

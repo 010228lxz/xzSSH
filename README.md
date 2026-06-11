@@ -107,6 +107,24 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `check` | Analyze configuration for errors or port conflicts. |
 | `generate` | Regenerate the final `~/.ssh/config` file. |
 | `key` | Manage private keys and integrate with `ssh-agent`. |
+| `profile` | Manage config profiles: `add`, `list`, `use`, `remove`. |
+
+### 👤 Profiles
+
+Juggling work / personal / client configs? Register each JSON file once
+and switch by name:
+
+```bash
+xzssh profile add work ~/team-ssh.json --default
+xzssh profile add personal ~/.ssh/personal.json
+
+xzssh --profile personal connect homelab   # one-off
+export XZSSH_PROFILE=personal              # for this shell session
+xzssh profile use personal                 # as the new default
+```
+
+Resolution order: `--config` > `--profile` > `$XZSSH_PROFILE` > default
+profile > `~/.ssh/xzssh.json`.
 
 ---
 
