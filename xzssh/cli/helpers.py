@@ -2,12 +2,13 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from xzssh.cli.ui import print_error
+from xzssh.cli.ui import print_error, print_notice, print_warning
 from xzssh.model import Config, Host, LocalForward, RemoteForward
-from xzssh.parser import ConfigParseError, load_config
+from xzssh.parser import ConfigParseError, load_config_versioned
 from xzssh.platform import ensure_secure_file_permissions, resolve_path
 
 
@@ -23,10 +24,39 @@ def load_config_if_exists(config_path: Path) -> Optional[Config]:
     if not config_path.exists():
         return None
     try:
-        return load_config(config_path)
+        config, source_version = load_config_versioned(config_path)
     except ConfigParseError as exc:
         print_error(str(exc))
         return None
+    if source_version != config.version:
+        _persist_migrated_config(config_path, config, source_version)
+    return config
+
+
+def _persist_migrated_config(
+    config_path: Path, config: Config, source_version: int
+) -> None:
+    """One-time write-back after an in-memory schema migration.
+
+    The original file is copied to ``.bak`` before the upgraded form is
+    written. On any failure the command keeps running with the migrated
+    in-memory config — migrations are idempotent by contract, so the
+    upgrade simply re-runs on the next load.
+    """
+    backup = config_path.with_name(config_path.name + ".bak")
+    try:
+        shutil.copy2(config_path, backup)
+        write_config(config_path, config)
+    except OSError as exc:
+        print_warning(
+            f"Config schema was migrated in memory but the upgrade could "
+            f"not be saved: {exc}"
+        )
+        return
+    print_notice(
+        f"Config schema upgraded v{source_version} → v{config.version}; "
+        f"previous file saved to {backup}"
+    )
 
 
 def parse_local_forward_arg(raw: str) -> LocalForward:

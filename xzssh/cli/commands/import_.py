@@ -43,7 +43,7 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         return 0
 
     with status("Updating xzSSH configuration"):
-        config = load_config_if_exists(config_path) or Config(version=1, hosts=[])
+        config = load_config_if_exists(config_path) or Config(hosts=[])
 
         added = 0
         skipped = 0

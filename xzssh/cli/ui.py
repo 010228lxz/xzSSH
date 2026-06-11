@@ -87,6 +87,14 @@ def print_info(message: str):
     """Prints an info message."""
     console.print(f"[info]ℹ[/info] {message}")
 
+def print_notice(message: str):
+    """Prints an info-styled message to STDERR.
+
+    For notices emitted during config loading — they must not corrupt
+    the stdout of piped commands like `xzssh export > backup.json`.
+    """
+    error_console.print(f"[info]ℹ[/info] {message}")
+
 def print_host_status(alias: str, host_name: str, status: str):
     """Prints a styled status line for a host."""
     icon = "[success]●[/success]" if status == "online" else "[error]○[/error]"

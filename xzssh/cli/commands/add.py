@@ -39,7 +39,7 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
     with status("Preparing to add host"):
         config = load_config_if_exists(config_path)
     if config is None:
-        config = Config(version=1, hosts=[])
+        config = Config(hosts=[])
 
     local_forwards: List[LocalForward] = []
     for raw in args.local_forward:

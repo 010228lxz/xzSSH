@@ -58,17 +58,13 @@ prompt paths, which is now locked in by tests.
 
 Real design work; would benefit from a spec / RFC before coding.
 
-### Schema versioning + migrations — `[M]`
-
-`Config.version = 1` exists but there's no migration framework. Worth
-setting up the pattern *before* the first schema break, not after.
-
-- Define `MIGRATIONS: Dict[int, Callable[[dict], dict]]` keyed by
-  source version.
-- On load, if file version < current, run migrations in sequence,
-  re-validate, write back with a `.bak`.
-- Document the contract: never lower the version number; never re-use
-  a version number; migrations must be idempotent.
+- ✅ Schema versioning + migrations — **v0.11.0**. The registry lives
+  in `xzssh/parser/migrations.py` (with the contract in its
+  docstring); `CURRENT_SCHEMA_VERSION` in `xzssh/model/types.py`.
+  Old files are upgraded in memory on every load and written back once
+  through the CLI load path with a `.bak`. Newer-than-supported files
+  are refused. Still on schema v1 — the framework ships ahead of the
+  first real break, as planned.
 
 ### Multiple profiles — `[M]`
 

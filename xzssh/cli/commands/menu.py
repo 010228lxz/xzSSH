@@ -155,7 +155,7 @@ def main_menu(config_path: Path, suggest_ports: bool) -> int:
         with status("Loading configuration"):
             config = load_config_if_exists(config_path)
         if config is None:
-            config = Config(version=1, hosts=[])
+            config = Config(hosts=[])
 
         action = prompt_select_action(
             "Main Menu",

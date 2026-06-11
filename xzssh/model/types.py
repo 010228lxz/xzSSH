@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+# Schema version this code reads and writes. Bumping it requires
+# registering a migration in xzssh/parser/migrations.py — see the
+# contract documented there. Never lower it, never re-use a number.
+CURRENT_SCHEMA_VERSION = 1
+
 
 @dataclass
 class LocalForward:
@@ -93,7 +98,7 @@ class Host:
 
 @dataclass
 class Config:
-    version: int = 1
+    version: int = CURRENT_SCHEMA_VERSION
     hosts: List[Host] = field(default_factory=list)
     keys: Dict[str, str] = field(default_factory=dict)
 

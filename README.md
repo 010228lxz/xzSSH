@@ -119,6 +119,11 @@ xzSSH follows a strict **Parse ➔ Validate ➔ Generate** pipeline:
 3. **Validator**: Performs semantic checks (ports, aliases, file paths).
 4. **Generator**: Renders a deterministic, human-readable OpenSSH configuration.
 
+The JSON schema is **versioned**: configs written by an older xzSSH are
+migrated automatically on load (the original is kept as `xzssh.json.bak`),
+and files from a *newer* xzSSH are refused with a clear error instead of
+being half-parsed.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request or open an issue on GitHub.
