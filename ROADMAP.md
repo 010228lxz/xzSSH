@@ -101,14 +101,14 @@ already restricted to `0600`. Some users will want stronger guarantees.
   it if there's clear demand. Likely behind a `--encrypt` flag and a
   config-level opt-in.
 
-### `xzssh tunnel <alias>` — `[M]`
-
-Open the `LocalForward` rules defined for a host without starting an
-interactive session. Daemon-style use case.
-
-- `ssh -N -f` for background, or foreground with a clean stop signal.
-- `xzssh tunnel list` to show active tunnels (requires a state file).
-- `xzssh tunnel stop <alias>`.
+- ✅ `xzssh tunnel` — **v0.13.0**. `tunnel start <alias>` (foreground
+  `ssh -N`, Ctrl-C to stop) / `tunnel start --detach` / `tunnel list` /
+  `tunnel stop <alias>|--all`, with a state file in the platform state
+  dir. Two deviations from the sketch: the CLI is `tunnel start
+  <alias>` rather than bare `tunnel <alias>` (so `list`/`stop` can't
+  collide with alias names), and backgrounding uses `Popen` in its own
+  session rather than `ssh -f` (ssh's fork hides the daemon pid, which
+  would make `tunnel stop` impossible).
 
 ---
 

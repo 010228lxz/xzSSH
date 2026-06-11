@@ -290,6 +290,43 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the would-be output to stdout and exit without writing",
     )
 
+    tunnel_parser = subparsers.add_parser(
+        "tunnel",
+        parents=[parent],
+        help="Open a host's port-forwards without a shell",
+    )
+    tunnel_subparsers = tunnel_parser.add_subparsers(
+        dest="tunnel_command", required=False
+    )
+
+    tunnel_start = tunnel_subparsers.add_parser(
+        "start", parents=[parent], help="Open the tunnel (ssh -N)"
+    )
+    tunnel_start_alias = tunnel_start.add_argument(
+        "alias", help="Alias of the host whose forwards to open"
+    )
+    tunnel_start_alias.completer = alias_completer  # type: ignore[attr-defined]
+    tunnel_start.add_argument(
+        "--detach",
+        action="store_true",
+        help="Run in the background; manage with `tunnel list` / `tunnel stop`",
+    )
+
+    tunnel_subparsers.add_parser(
+        "list", parents=[parent], help="Show recorded tunnels and their status"
+    )
+
+    tunnel_stop = tunnel_subparsers.add_parser(
+        "stop", parents=[parent], help="Stop a background tunnel"
+    )
+    tunnel_stop_alias = tunnel_stop.add_argument(
+        "alias", nargs="?", help="Alias of the tunnel to stop"
+    )
+    tunnel_stop_alias.completer = alias_completer  # type: ignore[attr-defined]
+    tunnel_stop.add_argument(
+        "--all", action="store_true", help="Stop every recorded tunnel"
+    )
+
     profile_parser = subparsers.add_parser(
         "profile", parents=[parent], help="Manage config profiles"
     )

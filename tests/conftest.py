@@ -20,3 +20,12 @@ def _isolated_profile_registry(
     monkeypatch.setenv("XZSSH_PROFILES_FILE", str(registry_file))
     monkeypatch.delenv("XZSSH_PROFILE", raising=False)
     return registry_file
+
+
+@pytest.fixture(autouse=True)
+def _isolated_tunnel_state(
+    tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> Path:
+    state_file = tmp_path_factory.mktemp("tunnels") / "tunnels.json"
+    monkeypatch.setenv("XZSSH_TUNNELS_FILE", str(state_file))
+    return state_file

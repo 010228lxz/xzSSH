@@ -319,6 +319,36 @@ def print_profile_table(rows: List[Any]):
 
     console.print(table)
 
+def print_tunnel_table(rows: List[Any]):
+    """Prints recorded tunnels. Rows are (alias, pid, alive, started_at, forwards)."""
+    if not rows:
+        console.print(
+            "[muted]No tunnels recorded. "
+            "Start one with `xzssh tunnel start <alias> --detach`.[/muted]"
+        )
+        return
+
+    table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold underline")
+    table.add_column("Alias", style="alias", no_wrap=True)
+    table.add_column("PID", style="port")
+    table.add_column("Status")
+    table.add_column("Started", style="last_used")
+    table.add_column("Forwards", style="tag")
+
+    for alias, pid, alive, started_at, forwards in rows:
+        status_str = (
+            "[success]● up[/success]" if alive else "[error]○ dead[/error]"
+        )
+        table.add_row(
+            alias,
+            str(pid),
+            status_str,
+            started_at or "[muted]-[/muted]",
+            ", ".join(forwards) if forwards else "[muted]-[/muted]",
+        )
+
+    console.print(table)
+
 def print_key_table(keys: dict[str, str]):
     """Prints a styled table of keys."""
     if not keys:
@@ -351,6 +381,7 @@ def print_help():
         ("which <alias>", "Print the resolved ssh command without running it"),
         ("search <query>", "Search hosts by alias, hostname, user, or tag"),
         ("test [alias]", "Probe connectivity without opening a shell"),
+        ("tunnel start <alias>", "Open the host's forwards without a shell"),
         ("add", "Interactively add a new host"),
         ("edit <alias>", "Edit a host's JSON entry in $EDITOR"),
         ("remove [alias...]", "Remove one or more hosts by alias"),

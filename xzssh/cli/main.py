@@ -19,6 +19,7 @@ from xzssh.cli.commands import (
     remove as remove_cmd,
     search as search_cmd,
     test as test_cmd,
+    tunnel as tunnel_cmd,
     which as which_cmd,
 )
 from xzssh.cli.completion import install_argcomplete
@@ -105,6 +106,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command == "tunnel":
+        if getattr(args, "tunnel_command", None) is None:
+            print_help()
+            return 0
+        return tunnel_cmd.run(args, config_path)
     if args.command == "generate":
         output_path = (
             Path(args.output) if args.output else platform_default_output_path()
