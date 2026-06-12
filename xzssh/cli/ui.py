@@ -575,6 +575,7 @@ def print_help():
         ("test [alias]", "Probe connectivity without opening a shell"),
         ("tunnel start <alias>", "Open the host's forwards without a shell"),
         ("history", "Recent connections (opt-in: history enable)"),
+        ("scp / sftp / rsync", "Transfer wrappers that understand aliases"),
         ("add", "Interactively add a new host"),
         ("edit <alias>", "Edit a host's JSON entry in $EDITOR"),
         ("remove [alias...]", "Remove one or more hosts by alias"),

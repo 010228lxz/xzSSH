@@ -464,6 +464,26 @@ def build_parser() -> argparse.ArgumentParser:
     profile_remove_name = profile_remove.add_argument("name")
     profile_remove_name.completer = profile_completer  # type: ignore[attr-defined]
 
+    for tool, tool_help in (
+        ("scp", "Run scp with alias rewriting (db:/path → user@host:/path)"),
+        ("sftp", "Run sftp against an alias"),
+        ("rsync", "Run rsync with alias rewriting and -e ssh options"),
+    ):
+        tool_parser = subparsers.add_parser(tool, parents=[parent], help=tool_help)
+        tool_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help=f"Print the resolved {tool} command without running it",
+        )
+        tool_parser.add_argument(
+            "args",
+            nargs=argparse.REMAINDER,
+            metavar="ARGS",
+            help=f"Arguments passed to {tool}; <alias>:<path> tokens are "
+            "rewritten. xzssh's own flags come first; use `--` before "
+            f"{tool} flags (e.g. `xzssh {tool} -- -r ...`)",
+        )
+
     theme_parser = subparsers.add_parser(
         "theme", parents=[parent], help="Show or set the UI color theme"
     )

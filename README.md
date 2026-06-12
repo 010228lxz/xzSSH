@@ -100,6 +100,7 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `test [alias]` | Probe connectivity (`--all` for every host) without opening a shell. |
 | `tunnel start <alias>` | Open the host's port-forwards without a shell (`--detach` to background; `tunnel list` / `tunnel stop`). |
 | `history` | Recent connections with exit codes (opt-in: `history enable`; hosts tagged `no-log` are never recorded). |
+| `scp` / `sftp` / `rsync` | Transfer wrappers that rewrite `alias:path` and inject the host's port/identity/jump options. |
 | `add` | Add a host — interactively, or via flags (`--proxy-jump`, `--tag`, forwards, …). |
 | `edit <alias>` | Edit a host's JSON entry in `$EDITOR`, re-validated on save. |
 | `remove [alias...]` | Remove one or more hosts by alias (`--dry-run` to preview). |

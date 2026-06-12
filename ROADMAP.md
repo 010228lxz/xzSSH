@@ -105,11 +105,11 @@ All Tier 3 items have shipped (v0.11.0 – v0.15.0):
 
 Worth considering, but each has real friction or out-of-scope risk.
 
-### `xzssh scp` / `xzssh sftp` / `xzssh rsync` wrappers
-
-Convenience wrappers that resolve an alias and pass through to the
-real binary. Marginal value over just running `scp host:path .` once
-the user's `~/.ssh/config` is set up.
+- ✅ `xzssh scp` / `xzssh sftp` / `xzssh rsync` wrappers — **v0.18.0**.
+  Alias rewriting (`db:/x` → `user@host:/x`) plus per-host option
+  injection (`-P/-i/-J/-o`, or `-e ssh …` for rsync), so they work even
+  when `~/.ssh/config` was never generated — which is exactly the case
+  where "just run scp" doesn't.
 
 - ✅ `xzssh history` view + connection event log — **v0.16.0**.
   Shipped together, as predicted (history needs the exit codes only a

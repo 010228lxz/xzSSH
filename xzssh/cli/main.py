@@ -24,6 +24,7 @@ from xzssh.cli.commands import (
     sync as sync_cmd,
     test as test_cmd,
     theme as theme_cmd,
+    transfer as transfer_cmd,
     tunnel as tunnel_cmd,
     which as which_cmd,
 )
@@ -107,8 +108,9 @@ def _dispatch(args, config_path: Path) -> int:
 
     # Commands whose stdout is meant to be captured or piped must NOT emit
     # the decorative banner — it would corrupt redirected output (e.g.
-    # `xzssh export > backup.json`, `$(xzssh which db)`).
-    QUIET_COMMANDS = {"which", "search", "export"}
+    # `xzssh export > backup.json`, `$(xzssh which db)`). The transfer
+    # wrappers are quiet too: rsync/scp output is often piped or parsed.
+    QUIET_COMMANDS = {"which", "search", "export", "scp", "sftp", "rsync"}
     if args.command not in QUIET_COMMANDS:
         print_banner()
 
@@ -147,6 +149,8 @@ def _dispatch(args, config_path: Path) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command in ("scp", "sftp", "rsync"):
+        return transfer_cmd.run(args, config_path, args.command)
     if args.command == "history":
         return history_cmd.run(args, config_path)
     if args.command == "encrypt":
