@@ -18,6 +18,7 @@ from xzssh.cli.commands import (
     profile as profile_cmd,
     remove as remove_cmd,
     search as search_cmd,
+    sync as sync_cmd,
     test as test_cmd,
     tunnel as tunnel_cmd,
     which as which_cmd,
@@ -111,6 +112,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             print_help()
             return 0
         return tunnel_cmd.run(args, config_path)
+    if args.command == "sync":
+        output_path = (
+            Path(args.output) if args.output else platform_default_output_path()
+        )
+        return sync_cmd.run(args, config_path, output_path)
     if args.command == "generate":
         output_path = (
             Path(args.output) if args.output else platform_default_output_path()

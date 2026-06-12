@@ -271,6 +271,32 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-host connect timeout (default: 5)",
     )
 
+    sync_parser = subparsers.add_parser(
+        "sync",
+        parents=[parent],
+        help="Detect and resolve drift between the JSON and ~/.ssh/config",
+    )
+    sync_parser.add_argument(
+        "--output",
+        help="Path of the OpenSSH config to compare (default: ~/.ssh/config)",
+    )
+    sync_parser.add_argument(
+        "--prefer",
+        choices=["json", "file"],
+        help="Resolve all drift in one direction without prompting",
+    )
+    sync_parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="Choose json/file per drifted host",
+    )
+    sync_parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Allow --prefer json to overwrite a file containing unmodeled "
+        "constructs (Match/Include/wildcards); a .bak is always saved",
+    )
+
     generate_parser = subparsers.add_parser(
         "generate", parents=[parent], help="Generate ~/.ssh/config"
     )

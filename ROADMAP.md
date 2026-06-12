@@ -74,21 +74,14 @@ Real design work; would benefit from a spec / RFC before coding.
   stdlib TOML reader and no version has a writer; the dep tree stays
   rich + questionary).
 
-### `xzssh sync` — bidirectional with `~/.ssh/config` — `[L]`
-
-Right now the flow is one-way: JSON → generated config. If the user
-edits `~/.ssh/config` by hand (common for one-off settings),
-xzSSH overwrites their changes on the next `generate`. Hard problem
-because:
-
-- Need to detect that the user's file is no longer xzSSH-generated
-  (the header check already catches this, but only as a refusal — not
-  a merge path).
-- Need to re-parse the generated config and detect drift vs. the JSON.
-- Conflict resolution: file-wins / json-wins / interactive merge.
-
-This is where the OpenSSH importer's `Match`/`Include` warnings become
-real merge conflicts.
+- ✅ `xzssh sync` — **v0.14.0**. Report mode by default (exit 1 on
+  drift, scriptable), `--prefer json` (regenerate with `.bak`),
+  `--prefer file` (import drift into the JSON, preserving
+  tags/last_used, validated before write), `--interactive` (per-host
+  choice; mixed decisions compose). The importer's `Match`/`Include`
+  warnings did become the merge conflicts predicted here: they gate the
+  json-wins direction behind `--force`/confirmation, while file-wins
+  proceeds with a warning since it never touches the file.
 
 ### Encrypted JSON at rest — `[L]`
 
