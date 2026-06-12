@@ -111,18 +111,11 @@ Convenience wrappers that resolve an alias and pass through to the
 real binary. Marginal value over just running `scp host:path .` once
 the user's `~/.ssh/config` is set up.
 
-### `xzssh history` view
-
-`Host.last_used` exists; we already sort by it. A dedicated
-`xzssh history` showing chronological recent connections (last 50,
-with timestamps and exit codes) would be nice if we also log exit
-codes — currently we don't.
-
-### Connection event log
-
-Opt-in `~/.ssh/xzssh.log` with timestamped connect events. Pairs with
-the history view. Privacy-sensitive — must be opt-in and respect a
-"no-log" host tag.
+- ✅ `xzssh history` view + connection event log — **v0.16.0**.
+  Shipped together, as predicted (history needs the exit codes only a
+  log can provide). Opt-in via `xzssh history enable`; JSONL next to
+  the config file (per-profile); `no-log` host tag respected; `0600`;
+  best-effort writes that never fail a connect.
 
 ### macOS Keychain integration
 

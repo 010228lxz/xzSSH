@@ -351,6 +351,39 @@ def print_tunnel_table(rows: List[Any]):
 
     console.print(table)
 
+def print_history_table(events: List[Dict[str, Any]]):
+    """Prints connection history entries (dicts from the event log), newest first."""
+    table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold underline")
+    table.add_column("When", style="last_used", no_wrap=True)
+    table.add_column("Alias", style="alias", no_wrap=True)
+    table.add_column("Target", style="host")
+    table.add_column("Exit")
+    table.add_column("Duration", style="port")
+
+    for event in events:
+        ts = str(event.get("ts", "?")).replace("T", " ")
+        user = event.get("user")
+        host_name = event.get("host_name", "?")
+        target = f"{user}@{host_name}" if user else str(host_name)
+        exit_code = event.get("exit_code")
+        if exit_code == 0:
+            exit_str = "[success]0 ✔[/success]"
+        else:
+            exit_str = f"[error]{exit_code}[/error]"
+        duration = event.get("duration")
+        duration_str = _format_duration(duration) if isinstance(duration, (int, float)) else "-"
+        table.add_row(ts, str(event.get("alias", "?")), target, exit_str, duration_str)
+
+    console.print(table)
+
+def _format_duration(seconds: float) -> str:
+    seconds = int(seconds)
+    if seconds >= 3600:
+        return f"{seconds // 3600}h {(seconds % 3600) // 60}m"
+    if seconds >= 60:
+        return f"{seconds // 60}m {seconds % 60}s"
+    return f"{seconds}s"
+
 def print_key_table(keys: dict[str, str]):
     """Prints a styled table of keys."""
     if not keys:
@@ -384,6 +417,7 @@ def print_help():
         ("search <query>", "Search hosts by alias, hostname, user, or tag"),
         ("test [alias]", "Probe connectivity without opening a shell"),
         ("tunnel start <alias>", "Open the host's forwards without a shell"),
+        ("history", "Recent connections (opt-in: history enable)"),
         ("add", "Interactively add a new host"),
         ("edit <alias>", "Edit a host's JSON entry in $EDITOR"),
         ("remove [alias...]", "Remove one or more hosts by alias"),

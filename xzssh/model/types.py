@@ -105,6 +105,11 @@ class Config:
     # field travels inside the (decrypted) JSON, so the choice survives
     # round-trips; write_config envelopes the file whenever it is set.
     encryption: Optional[str] = None
+    # Connection event log opt-in: path to a JSONL file (relative paths
+    # anchor to the config file's directory, like identity_file). None =
+    # disabled. Privacy-sensitive, so strictly opt-in; hosts tagged
+    # "no-log" are never recorded.
+    event_log: Optional[str] = None
 
     def to_dict(self) -> Dict[str, object]:
         data: Dict[str, object] = {
@@ -114,4 +119,6 @@ class Config:
         }
         if self.encryption is not None:
             data["encryption"] = self.encryption
+        if self.event_log is not None:
+            data["event_log"] = self.event_log
         return data

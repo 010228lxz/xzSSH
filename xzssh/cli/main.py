@@ -12,6 +12,7 @@ from xzssh.cli.commands import (
     encrypt as encrypt_cmd,
     export as export_cmd,
     generate as generate_cmd,
+    history as history_cmd,
     import_ as import_cmd,
     import_json as import_json_cmd,
     key as key_cmd,
@@ -122,6 +123,8 @@ def _dispatch(args, config_path: Path) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command == "history":
+        return history_cmd.run(args, config_path)
     if args.command == "encrypt":
         return encrypt_cmd.run(args, config_path)
     if args.command == "decrypt":

@@ -89,8 +89,16 @@ def load_config_versioned(path: Path) -> Tuple[Config, int]:
         # manually-encrypted config round-trips encrypted.
         encryption = envelope_tool
 
+    event_log = _optional_str(data, "event_log")
+
     return (
-        Config(version=version, hosts=hosts, keys=keys, encryption=encryption),
+        Config(
+            version=version,
+            hosts=hosts,
+            keys=keys,
+            encryption=encryption,
+            event_log=event_log,
+        ),
         source_version,
     )
 

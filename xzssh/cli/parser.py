@@ -271,6 +271,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-host connect timeout (default: 5)",
     )
 
+    history_parser = subparsers.add_parser(
+        "history",
+        parents=[parent],
+        help="Show recent connections (from the opt-in event log)",
+    )
+    history_parser.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        metavar="N",
+        help="Show at most N entries (default: 50)",
+    )
+    history_subparsers = history_parser.add_subparsers(
+        dest="history_command", required=False
+    )
+    history_enable = history_subparsers.add_parser(
+        "enable", parents=[parent], help="Opt in to connection logging"
+    )
+    history_enable.add_argument(
+        "--file",
+        metavar="PATH",
+        help="Log file path (default: xzssh.log next to the config file)",
+    )
+    history_subparsers.add_parser(
+        "disable", parents=[parent], help="Stop logging (keeps the log file)"
+    )
+    history_subparsers.add_parser(
+        "clear", parents=[parent], help="Delete the log file"
+    )
+
     encrypt_parser = subparsers.add_parser(
         "encrypt",
         parents=[parent],
