@@ -129,11 +129,10 @@ For users with 50+ hosts, hierarchical grouping (`prod/db/primary`,
 `prod/db/replica`). Probably better served by tags + multi-tag
 filtering than by a real hierarchy.
 
-### Themes
-
-`rich` makes per-theme styling easy. The current neon-green/cyan/pink
-palette is opinionated; a `--theme classic` and `--theme high-contrast`
-would help users who want something more sober.
+- ✅ Themes — **v0.17.0**. `classic` and `high-contrast` as sketched,
+  plus `mono` (emphasis-only, for monochrome terminals). `--theme` /
+  `$XZSSH_THEME` / `xzssh theme <name>` (saved in the profiles
+  registry). All styling flows through semantic names in `ui.py`.
 
 ### TUI dashboard (vs. menu loops)
 

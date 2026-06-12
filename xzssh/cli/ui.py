@@ -15,45 +15,193 @@ import questionary
 
 from xzssh import __version__
 
-# Define a theme that mimics a modern CLI (like junie or claudecode)
-# Neutral tones for text, bright accents for highlights and status indicators.
-CLI_THEME = Theme({
-    "info": "#00FFFF",  # Neon Cyan
-    "warning": "#FFFF33",  # Neon Yellow
-    "error": "#FF3131",  # Neon Red
-    "success": "#39FF14",  # Neon Green
-    "highlight": "bold #FF00FF",  # Neon Pink/Magenta
-    "muted": "dim white",
-    "alias": "bold #39FF14",  # Neon Green
-    "host": "white",
-    "user": "#39FF14",  # Neon Green
-    "port": "#00FFFF",  # Neon Cyan
-    "tag": "#FF00FF",  # Neon Pink
-    "last_used": "dim white",
-    "step": "italic dim white",
-    "key": "#FFFF33",  # Neon Yellow
-    "radio_selected": "bold #39FF14",  # Neon Green
-    "radio_unselected": "dim white",
-    "text": "white",
-    "shortcut": "bold #39FF14",  # Neon Green - User wants shortcuts noticeable, neon green is better than yellow
-    "section": "bold underline #39FF14",  # Neon Green
-})
+# Themes. Each palette maps the semantic style names used throughout the
+# CLI ("alias", "error", ...) to rich styles, plus a small "prompt" block
+# of raw prompt_toolkit colors for the questionary widgets. All styling
+# is centralized HERE — command handlers must only ever use the semantic
+# names (plus [accent] for brand-colored text).
+PALETTES = {
+    # The original look: neutral tones, neon accents.
+    "neon": {
+        "styles": {
+            "info": "#00FFFF",  # Neon Cyan
+            "warning": "#FFFF33",  # Neon Yellow
+            "error": "#FF3131",  # Neon Red
+            "success": "#39FF14",  # Neon Green
+            "highlight": "bold #FF00FF",  # Neon Pink/Magenta
+            "muted": "dim white",
+            "alias": "bold #39FF14",
+            "host": "white",
+            "user": "#39FF14",
+            "port": "#00FFFF",
+            "tag": "#FF00FF",
+            "last_used": "dim white",
+            "step": "italic dim white",
+            "key": "#FFFF33",
+            "radio_selected": "bold #39FF14",
+            "radio_unselected": "dim white",
+            "text": "white",
+            "shortcut": "bold #39FF14",
+            "section": "bold underline #39FF14",
+            "accent": "bold #39FF14",
+            "banner_border": "#39FF14",
+        },
+        "prompt": {
+            "accent": "#39FF14",
+            "separator": "#FF00FF",
+            "text": "#ffffff",
+            "muted": "#666666",
+        },
+    },
+    # Sober ANSI-named colors that respect the terminal's own scheme.
+    "classic": {
+        "styles": {
+            "info": "cyan",
+            "warning": "yellow",
+            "error": "red",
+            "success": "green",
+            "highlight": "bold magenta",
+            "muted": "dim",
+            "alias": "bold cyan",
+            "host": "default",
+            "user": "green",
+            "port": "cyan",
+            "tag": "magenta",
+            "last_used": "dim",
+            "step": "italic dim",
+            "key": "yellow",
+            "radio_selected": "bold green",
+            "radio_unselected": "dim",
+            "text": "default",
+            "shortcut": "bold green",
+            "section": "bold underline",
+            "accent": "bold green",
+            "banner_border": "green",
+        },
+        "prompt": {
+            "accent": "ansigreen",
+            "separator": "ansimagenta",
+            "text": "",
+            "muted": "ansibrightblack",
+        },
+    },
+    # Maximum legibility: bright colors, bold accents, no dim text.
+    "high-contrast": {
+        "styles": {
+            "info": "bright_cyan",
+            "warning": "bold bright_yellow",
+            "error": "bold bright_red",
+            "success": "bold bright_green",
+            "highlight": "bold bright_magenta",
+            "muted": "white",
+            "alias": "bold bright_white",
+            "host": "bright_white",
+            "user": "bright_green",
+            "port": "bright_cyan",
+            "tag": "bright_magenta",
+            "last_used": "white",
+            "step": "white",
+            "key": "bright_yellow",
+            "radio_selected": "bold bright_green",
+            "radio_unselected": "white",
+            "text": "bright_white",
+            "shortcut": "bold bright_yellow",
+            "section": "bold underline bright_white",
+            "accent": "bold bright_white",
+            "banner_border": "bright_white",
+        },
+        "prompt": {
+            "accent": "ansibrightgreen",
+            "separator": "ansibrightmagenta",
+            "text": "ansibrightwhite",
+            "muted": "ansiwhite",
+        },
+    },
+    # No color at all — emphasis only. For pipes, screenshots, and
+    # monochrome terminals.
+    "mono": {
+        "styles": {
+            "info": "default",
+            "warning": "bold",
+            "error": "bold reverse",
+            "success": "bold",
+            "highlight": "bold",
+            "muted": "dim",
+            "alias": "bold",
+            "host": "default",
+            "user": "default",
+            "port": "default",
+            "tag": "italic",
+            "last_used": "dim",
+            "step": "italic dim",
+            "key": "underline",
+            "radio_selected": "bold",
+            "radio_unselected": "dim",
+            "text": "default",
+            "shortcut": "bold",
+            "section": "bold underline",
+            "accent": "bold",
+            "banner_border": "dim",
+        },
+        "prompt": {
+            "accent": "bold",
+            "separator": "",
+            "text": "",
+            "muted": "",
+        },
+    },
+}
 
-console = Console(theme=CLI_THEME)
-error_console = Console(theme=CLI_THEME, stderr=True)
+DEFAULT_THEME = "neon"
+_active_theme = DEFAULT_THEME
+
+console = Console(theme=Theme(PALETTES[DEFAULT_THEME]["styles"]))
+error_console = Console(theme=Theme(PALETTES[DEFAULT_THEME]["styles"]), stderr=True)
+
+# Whether apply_theme has pushed a theme onto the consoles' stacks (so a
+# re-apply pops the previous one instead of growing the stack forever).
+_theme_pushed = False
+
+
+def available_themes():
+    return sorted(PALETTES)
+
+
+def active_theme_name() -> str:
+    return _active_theme
+
+
+def apply_theme(name: str) -> None:
+    """Switch both consoles (and the questionary palette) to *name*.
+
+    Mutates the module-global consoles in place — every module that did
+    ``from xzssh.cli.ui import console`` keeps working.
+    """
+    global _active_theme, _theme_pushed
+    if name not in PALETTES:
+        raise ValueError(
+            f"Unknown theme '{name}' (available: {', '.join(available_themes())})"
+        )
+    theme = Theme(PALETTES[name]["styles"])
+    for target in (console, error_console):
+        if _theme_pushed:
+            target.pop_theme()
+        target.push_theme(theme)
+    _theme_pushed = True
+    _active_theme = name
 
 def print_banner():
     """Prints a stylish banner for xzSSH."""
     logo = r"""
- [bold #39FF14]   __  __ _____  _____  _____  __ __ [/bold #39FF14]
- [bold #39FF14]   \ \/ //__  / /  ___|/  ___|| | | |[/bold #39FF14]
- [bold #39FF14]    \  /   / /  \ `--. \ `--. | |_| |[/bold #39FF14]
- [bold #39FF14]    /  \  / /    `--. \ `--. \|  _  |[/bold #39FF14]
- [bold #39FF14]   / /\ \/ /__  /\__/ //\__/ /| | | |[/bold #39FF14]
- [bold #39FF14]  /_/  \_\_____|\____/ \____/ \_| |_/[/bold #39FF14]
+ [accent]   __  __ _____  _____  _____  __ __ [/accent]
+ [accent]   \ \/ //__  / /  ___|/  ___|| | | |[/accent]
+ [accent]    \  /   / /  \ `--. \ `--. | |_| |[/accent]
+ [accent]    /  \  / /    `--. \ `--. \|  _  |[/accent]
+ [accent]   / /\ \/ /__  /\__/ //\__/ /| | | |[/accent]
+ [accent]  /_/  \_\_____|\____/ \____/ \_| |_/[/accent]
     """
-    banner_text = f"{logo}\n[bold #39FF14]xzSSH[/bold #39FF14] [muted]v{__version__}[/muted]\n[dim]The SSH configuration CLI manager[/dim]"
-    console.print(Panel(banner_text, border_style="#39FF14", expand=False, padding=(0, 2), subtitle="[dim]Keyboard-first & Fast[/dim]", subtitle_align="right"))
+    banner_text = f"{logo}\n[accent]xzSSH[/accent] [muted]v{__version__}[/muted]\n[dim]The SSH configuration CLI manager[/dim]"
+    console.print(Panel(banner_text, border_style="banner_border", expand=False, padding=(0, 2), subtitle="[dim]Keyboard-first & Fast[/dim]", subtitle_align="right"))
 
 def print_step(message: str):
     """Prints a styled step or action description."""
@@ -161,23 +309,32 @@ def print_host_table(hosts: List[Any], title: Optional[str] = None):
     console.print(table)
 
 def get_radio_style():
-    """Returns a custom questionary style for the radio-like selection with neon colors."""
+    """Returns a questionary style for the radio-like selection, from the active theme."""
+    prompt = PALETTES[_active_theme]["prompt"]
+
+    def fg(color: str, *extra: str) -> str:
+        parts = [f"fg:{color}"] if color else []
+        parts.extend(extra)
+        return " ".join(parts)
+
+    accent, separator = prompt["accent"], prompt["separator"]
+    text, muted = prompt["text"], prompt["muted"]
     return questionary.Style([
-        ('qmark', 'fg:#39FF14 bold'),       # Neon Green
+        ('qmark', fg(accent, 'bold')),
         ('question', 'bold'),
-        ('answer', 'fg:#39FF14 bold'),       # Neon Green
-        ('pointer', 'fg:#39FF14 bold'),      # Neon Green
-        ('highlighted', 'fg:#39FF14 bold'),  # Neon Green
-        ('selected', 'fg:#39FF14'),          # Neon Green
-        ('separator', 'fg:#FF00FF'),         # Neon Pink
-        ('instruction', 'fg:#666666 italic'),
-        ('radio_off', 'fg:#666666'),
-        ('radio_on', 'fg:#39FF14 bold'),     # Neon Green
-        ('shortcut', 'fg:#39FF14 bold'),     # Neon Green
-        ('text', 'fg:#ffffff'),              # Questionary style tokens don't need class: prefix
-        ('alias', 'fg:#39FF14 bold'),        # Neon Green
-        ('host', 'fg:#ffffff'),
-        ('muted', 'fg:#666666'),
+        ('answer', fg(accent, 'bold')),
+        ('pointer', fg(accent, 'bold')),
+        ('highlighted', fg(accent, 'bold')),
+        ('selected', fg(accent)),
+        ('separator', fg(separator)),
+        ('instruction', fg(muted, 'italic')),
+        ('radio_off', fg(muted)),
+        ('radio_on', fg(accent, 'bold')),
+        ('shortcut', fg(accent, 'bold')),
+        ('text', fg(text)),               # Questionary style tokens don't need class: prefix
+        ('alias', fg(accent, 'bold')),
+        ('host', fg(text)),
+        ('muted', fg(muted)),
     ])
 
 def prompt_select_action(message: str, choices: List[questionary.Choice], shortcuts: Optional[Dict[str, str]] = None) -> str:
@@ -229,7 +386,7 @@ def prompt_select_action(message: str, choices: List[questionary.Choice], shortc
 def prompt_host_details(existing_host: Optional[Any] = None) -> Dict[str, Any]:
     """Interactively prompts for host details."""
     title = "Editing SSH host..." if existing_host else "Adding a new SSH host..."
-    console.print(f"[bold #39FF14]{title}[/bold #39FF14]")
+    console.print(f"[accent]{title}[/accent]")
     
     alias = questionary.text(
         "Alias (e.g., web-prod):",
@@ -403,11 +560,11 @@ def print_key_table(keys: dict[str, str]):
 def print_help():
     """Prints a modern, guided help page."""
     console.print("\n[section]Interactive CLI (Recommended)[/section]")
-    console.print("  Simply run [bold green]xzssh[/bold green] with no arguments to enter the interactive dashboard.")
+    console.print("  Simply run [accent]xzssh[/accent] with no arguments to enter the interactive dashboard.")
     console.print("  From there, you can navigate with arrow keys to connect, add, or manage hosts.")
     
     console.print("\n[section]Standard CLI Usage[/section]")
-    console.print("  [bold green]xzssh[/bold green] [muted][options][/muted] <command> [muted][args][/muted]")
+    console.print("  [accent]xzssh[/accent] [muted][options][/muted] <command> [muted][args][/muted]")
     
     console.print("\n[bold]Commands:[/bold]")
     commands = [
@@ -431,17 +588,19 @@ def print_help():
         ("menu", "Open interactive management menu"),
         ("key", "Manage private keys and ssh-agent"),
         ("profile", "Manage config profiles (work/personal/...)"),
+        ("theme", "Show or set the UI color theme"),
     ]
     
     for cmd, desc in commands:
         cmd_escaped = escape(cmd)
         padding = " " * (30 - len(cmd))
-        console.print(f"  [bold green]{cmd_escaped}[/bold green]{padding} {desc}")
+        console.print(f"  [accent]{cmd_escaped}[/accent]{padding} {desc}")
         
     console.print("\n[bold]Global Options:[/bold]")
     options = [
         ("--config CONFIG", "Path to JSON config file"),
         ("--profile NAME", "Use a registered profile's config file"),
+        ("--theme NAME", "UI color theme for this invocation"),
         ("--suggest-ports", "Suggest free ports on conflicts"),
         ("-h, --help", "Show this help message and exit"),
     ]

@@ -112,6 +112,7 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `generate` | Regenerate the final `~/.ssh/config` file. |
 | `key` | Manage private keys and integrate with `ssh-agent`. |
 | `profile` | Manage config profiles: `add`, `list`, `use`, `remove`. |
+| `theme` | UI color theme: `neon` (default), `classic`, `high-contrast`, `mono`. Also `--theme` / `$XZSSH_THEME`. |
 
 ### 👤 Profiles
 

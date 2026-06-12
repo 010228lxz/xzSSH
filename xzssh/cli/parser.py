@@ -7,23 +7,39 @@ from xzssh.cli.completion import (
     key_completer,
     profile_completer,
 )
+from xzssh.cli.ui import available_themes
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # The same global options exist on the top-level parser AND (via this
+    # parent) on every subparser, so they work in either position. The
+    # subparser copies use default=SUPPRESS: without it, a subparser that
+    # doesn't see the flag writes its default into the shared namespace,
+    # silently clobbering a value parsed before the subcommand
+    # (`xzssh --config foo list`) on Python 3.13+.
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
         "--config",
+        default=argparse.SUPPRESS,
         help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
     )
     parent_profile = parent.add_argument(
         "--profile",
         metavar="NAME",
+        default=argparse.SUPPRESS,
         help="Use a registered profile's config file (see `xzssh profile`)",
     )
     parent_profile.completer = profile_completer  # type: ignore[attr-defined]
     parent.add_argument(
+        "--theme",
+        choices=available_themes(),
+        default=argparse.SUPPRESS,
+        help="UI color theme for this invocation (see `xzssh theme`)",
+    )
+    parent.add_argument(
         "--suggest-ports",
         action="store_true",
+        default=argparse.SUPPRESS,
         help="Suggest next free LocalForward port when conflicts are found",
     )
 
@@ -38,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Use a registered profile's config file (see `xzssh profile`)",
     )
     top_profile.completer = profile_completer  # type: ignore[attr-defined]
+    parser.add_argument(
+        "--theme",
+        choices=available_themes(),
+        help="UI color theme for this invocation (see `xzssh theme`)",
+    )
     parser.add_argument(
         "--suggest-ports",
         action="store_true",
@@ -442,6 +463,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     profile_remove_name = profile_remove.add_argument("name")
     profile_remove_name.completer = profile_completer  # type: ignore[attr-defined]
+
+    theme_parser = subparsers.add_parser(
+        "theme", parents=[parent], help="Show or set the UI color theme"
+    )
+    theme_parser.add_argument(
+        "name",
+        nargs="?",
+        choices=available_themes(),
+        help="Theme to persist as your preference",
+    )
+    theme_parser.add_argument(
+        "--unset",
+        action="store_true",
+        help="Clear the persisted theme preference",
+    )
 
     key_parser = subparsers.add_parser("key", parents=[parent], help="Manage keys")
     key_subparsers = key_parser.add_subparsers(dest="key_command", required=False)
