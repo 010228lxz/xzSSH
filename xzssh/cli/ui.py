@@ -13,6 +13,8 @@ from rich.text import Text
 from rich.markup import escape
 import questionary
 
+from xzssh import __version__
+
 # Define a theme that mimics a modern CLI (like junie or claudecode)
 # Neutral tones for text, bright accents for highlights and status indicators.
 CLI_THEME = Theme({
@@ -50,7 +52,7 @@ def print_banner():
  [bold #39FF14]   / /\ \/ /__  /\__/ //\__/ /| | | |[/bold #39FF14]
  [bold #39FF14]  /_/  \_\_____|\____/ \____/ \_| |_/[/bold #39FF14]
     """
-    banner_text = f"{logo}\n[bold #39FF14]xzSSH[/bold #39FF14] [muted]v0.1.0 BETA[/muted]\n[dim]The SSH configuration CLI manager[/dim]"
+    banner_text = f"{logo}\n[bold #39FF14]xzSSH[/bold #39FF14] [muted]v{__version__}[/muted]\n[dim]The SSH configuration CLI manager[/dim]"
     console.print(Panel(banner_text, border_style="#39FF14", expand=False, padding=(0, 2), subtitle="[dim]Keyboard-first & Fast[/dim]", subtitle_align="right"))
 
 def print_step(message: str):

@@ -31,6 +31,18 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      # The onefile binaries fall back to xzssh._FALLBACK_VERSION when
+      # package metadata isn't bundled — refuse to ship a binary whose
+      # fallback (or pyproject version) doesn't match the tag.
+      - name: Verify version consistency
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            python scripts/check_version.py "${GITHUB_REF_NAME}"
+          else
+            python scripts/check_version.py
+          fi
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
