@@ -9,6 +9,196 @@ during the 0.x series.
 
 ## [Unreleased]
 
+## [0.15.0] — 2026-06-12
+
+Closes out Tier 3.
+
+### Added
+
+- **Encrypted JSON at rest** — optional symmetric `gpg` or `age`
+  envelope around `~/.ssh/xzssh.json`:
+  - `xzssh encrypt [--tool gpg|age]` opts in (default: gpg, AES256,
+    armored); `xzssh decrypt` opts out. Switching tools re-encrypts.
+  - Transparent thereafter: `load_config` detects the envelope by
+    magic bytes and decrypts; `write_config` re-encrypts whenever
+    `Config.encryption` is set. The field travels inside the encrypted
+    JSON, so the choice survives round-trips — and a config the user
+    encrypted *manually* with gpg/age is detected from the file itself
+    and stays encrypted across writes.
+  - The passphrase is prompted by the tool itself (pinentry / age's
+    tty prompt) on every config read **and** write; xzSSH never sees
+    or stores it. A cancelled or failed prompt on write raises before
+    anything touches disk — the encrypted file is never corrupted.
+  - `xzssh export` remains the documented plaintext-backup escape
+    hatch (it prints the **decrypted** snapshot — keep backups
+    somewhere safe).
+
+### Security
+
+- `xzssh encrypt` deliberately leaves **no plaintext `.bak`** behind —
+  that would silently defeat the encryption. It warns about the
+  unrecoverable-passphrase risk instead and points at `export`.
+- Shell completers refuse to touch an enveloped config (no pinentry
+  popups mid-`<TAB>`); they return no completions instead.
+
+### Behavior notes
+
+- The generated `~/.ssh/config` stays plaintext — ssh itself has to
+  read it. The envelope protects the source of truth only.
+- `xzssh edit` still round-trips the host entry through a `0600`
+  scratch file in `$TMPDIR` while the editor is open.
+- Validator: `config.encryption` must be `gpg` or `age` when present.
+
+## [0.14.0] — 2026-06-12
+
+### Added
+
+- **`xzssh sync`** — closes the loop when `~/.ssh/config` was edited by
+  hand (previously the next `generate` simply clobbered such edits):
+  - **Report mode (default):** prints per-host drift — hosts only in
+    the file (`+`), only in the JSON (`-`), or changed (`~`, with the
+    exact fields) — and exits 1 when drift exists, 0 when in sync.
+    Scriptable like `git diff --exit-code`.
+  - **`--prefer json`** — regenerate the file from the JSON via the
+    `generate --force` path (existing file backed up to `.bak`).
+  - **`--prefer file`** — import the drift back into the JSON:
+    hand-added hosts are imported, missing hosts removed, changed
+    fields copied. JSON-only metadata (`tags`, `last_used`) is
+    preserved; the merged config is **semantically validated before
+    any write** (a hand-edit that e.g. introduces a forward-port
+    conflict aborts with both files untouched); the previous JSON is
+    saved to `.bak`. The file itself is never touched.
+  - **`--interactive`** — choose json/file per drifted host. Mixed
+    decisions compose: file-wins choices are folded into the JSON
+    first, then a single regeneration reflects everything.
+  - Drift comparison is normalization-aware: identity files are
+    resolved on both sides, an unset `Port` equals an explicit `22`,
+    and forward lists compare order-insensitively — formatting
+    differences are not drift.
+  - `Match` / `Include` / wildcard patterns (which the model can't
+    represent) are **not** drift on their own, but a json-wins
+    regeneration would wipe them — that direction requires `--force`
+    (or an explicit confirmation interactively). File-wins only warns,
+    since it never touches the file.
+- New `xzssh/sync/` package: pure diff logic (`compare_hosts`,
+  `DriftReport`) with no I/O — the CLI command only renders and
+  applies.
+
+## [0.13.0] — 2026-06-12
+
+### Added
+
+- **`xzssh tunnel`** — open a host's port-forwards without an
+  interactive session (nested subcommands like `key`, so `list`/`stop`
+  can never collide with a host alias):
+  - `tunnel start <alias>` — foreground `ssh -N` with the host's
+    LocalForward / RemoteForward / DynamicForward rules passed
+    explicitly as `-L`/`-R`/`-D` flags (the tunnel works even when
+    `~/.ssh/config` was never generated or is stale). Ctrl-C is the
+    documented way to stop and exits 0; other ssh exit codes propagate.
+  - `tunnel start <alias> --detach` — spawns ssh in its own session
+    with a known pid, records it in a state file, and returns. A short
+    startup grace period catches dead-on-arrival tunnels (unknown host,
+    port already bound) and reports the per-alias log file instead of
+    pretending success. Starting a second tunnel for the same alias
+    while one is alive is refused.
+  - `tunnel list` — table with per-pid liveness; dead records are
+    pruned on the way out.
+  - `tunnel stop <alias>` / `tunnel stop --all` — SIGTERM the recorded
+    pid(s) and forget them.
+- `ExitOnForwardFailure=yes` is always set on tunnel commands — a
+  "tunnel" whose forwards failed to bind dies instead of lingering.
+- Tunnel state lives in the platform *state* dir (it's runtime data,
+  not config): `$XDG_STATE_HOME/xzssh/tunnels.json` on POSIX,
+  `%LOCALAPPDATA%\xzssh\tunnels.json` on Windows, `$XZSSH_TUNNELS_FILE`
+  to override. Corrupt state degrades to empty rather than blocking.
+- New platform helpers `pid_alive` / `terminate_pid`
+  (`xzssh/platform/process.py`). The Windows liveness path goes through
+  `OpenProcess` — never `os.kill(pid, 0)`, which on Windows
+  *terminates* the target instead of probing it.
+
+### Behavior notes
+
+- Deliberately **not** `ssh -f`: ssh's own daemonization forks a child
+  whose pid can't be learned, which would make `tunnel stop`
+  impossible. `Popen` + own session gives the same detachment with a
+  known pid.
+- Forwards stay out of `connect`/`which`/`test` command lines, as
+  before — `tunnel` is the one command where forwards *are* the point.
+
+## [0.12.0] — 2026-06-12
+
+### Added
+
+- **Multiple profiles** — named pointers to alternate config files, so
+  work / personal / client setups don't need `--config` everywhere:
+  - `xzssh profile add <name> <path>` (`--default` to also make it the
+    default, `--replace` to overwrite), `profile list`, `profile use
+    <name>` (set default), `profile remove <name>` (unregisters; never
+    deletes the config file).
+  - `xzssh --profile work connect db` — every command accepts
+    `--profile`, before or after the subcommand.
+  - Per-shell-session override via `$XZSSH_PROFILE`; resolution order
+    is `--config` > `--profile` > `$XZSSH_PROFILE` > default profile >
+    `~/.ssh/xzssh.json`. Passing `--config` *and* `--profile` together
+    is an error rather than a silent precedence guess.
+  - The registry lives outside `~/.ssh` (it's CLI configuration, not
+    SSH data): `$XDG_CONFIG_HOME/xzssh/profiles.json` on POSIX,
+    `%APPDATA%\xzssh\profiles.json` on Windows, `$XZSSH_PROFILES_FILE`
+    to override. Written atomically with `0600`, like every other
+    xzSSH file.
+  - Tab completion: `--profile <TAB>`, `profile use <TAB>`, and
+    `profile remove <TAB>` complete registered names; alias/key
+    completion now honours `--profile` too.
+
+### Behavior notes
+
+- The registry is JSON, not the TOML the roadmap sketched: Python 3.9
+  has no stdlib TOML reader (and no version has a writer), and the
+  runtime dep tree deliberately stays `rich` + `questionary`.
+- Relative profile paths anchor to the registry file's directory —
+  same convention as `identity_file` anchoring to the config file.
+- `xzssh profile ...` subcommands skip profile resolution on purpose:
+  a dangling default profile fails other commands cleanly (exit 2) but
+  can always be repaired via `profile use` / `profile remove`.
+
+## [0.11.0] — 2026-06-12
+
+First Tier 3 item: infrastructure for safe schema evolution, landed
+*before* the first schema break rather than after.
+
+### Added
+
+- **Schema versioning + migration framework.** The JSON config's
+  `version` field is now enforced end-to-end:
+  - `CURRENT_SCHEMA_VERSION` lives in `xzssh/model/types.py` (the model
+    owns the schema); `Config.version` defaults to it, and every
+    fresh-config code path stamps it.
+  - `xzssh/parser/migrations.py` holds the `MIGRATIONS` registry —
+    `{source_version: fn}` where each fn upgrades a raw config dict one
+    version step. The contract (never lower or re-use a version number;
+    migrations are pure and idempotent; a gap in the chain is a hard
+    error) is documented in the module docstring.
+  - On load, an older file is upgraded **in memory** by running the
+    chain, then written back **once** through the normal CLI load path
+    (`load_config_if_exists`), with the original preserved as
+    `xzssh.json.bak`. The write-back failing is non-fatal: the command
+    keeps running on the migrated in-memory config and the upgrade
+    retries next load.
+  - A file with a *newer* schema version than the running xzSSH is
+    refused with a clear "upgrade xzSSH" error instead of being
+    half-parsed.
+  - `load_config_versioned(path)` joins `load_config` in the parser's
+    public API for callers that need the source version.
+
+### Behavior notes
+
+- Quiet paths stay quiet: the upgrade notice goes to stderr (piped
+  `xzssh export` output stays valid JSON), and shell completers migrate
+  in memory only — they never write from inside the completion shim.
+- The schema is still v1 — no actual migration ships in this release;
+  the framework is exercised by tests with synthetic migrations.
+
 ## [0.10.1] — 2026-05-30
 
 Docs and release-pipeline polish — no feature changes.
@@ -299,7 +489,12 @@ First public release.
   not generated by xzSSH** unless `--force` is passed. A `.bak` copy
   is saved whenever an existing file is overwritten.
 
-[Unreleased]: https://github.com/010228lxz/xzSSH/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/010228lxz/xzSSH/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/010228lxz/xzSSH/compare/v0.14.0...v0.15.0
+[0.14.0]: https://github.com/010228lxz/xzSSH/compare/v0.13.0...v0.14.0
+[0.13.0]: https://github.com/010228lxz/xzSSH/compare/v0.12.0...v0.13.0
+[0.12.0]: https://github.com/010228lxz/xzSSH/compare/v0.11.0...v0.12.0
+[0.11.0]: https://github.com/010228lxz/xzSSH/compare/v0.10.1...v0.11.0
 [0.10.1]: https://github.com/010228lxz/xzSSH/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/010228lxz/xzSSH/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/010228lxz/xzSSH/compare/v0.8.0...v0.9.0

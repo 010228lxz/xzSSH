@@ -7,7 +7,9 @@ from xzssh.cli.commands import (
     add as add_cmd,
     check as check_cmd,
     connect as connect_cmd,
+    decrypt as decrypt_cmd,
     edit as edit_cmd,
+    encrypt as encrypt_cmd,
     export as export_cmd,
     generate as generate_cmd,
     import_ as import_cmd,
@@ -15,16 +17,20 @@ from xzssh.cli.commands import (
     key as key_cmd,
     list_ as list_cmd,
     menu as menu_cmd,
+    profile as profile_cmd,
     remove as remove_cmd,
     search as search_cmd,
+    sync as sync_cmd,
     test as test_cmd,
+    tunnel as tunnel_cmd,
     which as which_cmd,
 )
 from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
-from xzssh.cli.ui import print_banner, print_help
+from xzssh.cli.profiles import ProfileError, registry_path, resolve_config_path
+from xzssh.cli.ui import print_banner, print_error, print_help
+from xzssh.crypto import EnvelopeError
 from xzssh.platform import (
-    default_config_path as platform_default_config_path,
     default_output_path as platform_default_output_path,
 )
 
@@ -36,15 +42,41 @@ def main(argv: Optional[List[str]] = None) -> int:
     install_argcomplete(parser)
     args = parser.parse_args(argv)
 
-    config_path = (
-        Path(args.config) if args.config else platform_default_config_path()
-    )
-
     if getattr(args, "help", False):
         print_banner()
         print_help()
         return 0
 
+    # `profile` is dispatched BEFORE config-path resolution: a dangling
+    # default profile must never lock the user out of the very commands
+    # needed to repair the registry.
+    if args.command == "profile":
+        print_banner()
+        if getattr(args, "profile_command", None) is None:
+            print_help()
+            return 0
+        return profile_cmd.run(args, registry_path())
+
+    try:
+        config_path = resolve_config_path(
+            args.config, getattr(args, "profile", None)
+        )
+    except ProfileError as exc:
+        print_error(str(exc))
+        return 2
+
+    # Single choke point for envelope failures (cancelled pinentry,
+    # wrong passphrase on re-encrypt, missing gpg/age binary): every
+    # command writes through write_config, which raises EnvelopeError
+    # before touching the file.
+    try:
+        return _dispatch(args, config_path)
+    except EnvelopeError as exc:
+        print_error(str(exc))
+        return 1
+
+
+def _dispatch(args, config_path: Path) -> int:
     if args.command is None:
         return menu_cmd.default_menu(config_path, args.suggest_ports)
 
@@ -90,6 +122,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command == "encrypt":
+        return encrypt_cmd.run(args, config_path)
+    if args.command == "decrypt":
+        return decrypt_cmd.run(args, config_path)
+    if args.command == "tunnel":
+        if getattr(args, "tunnel_command", None) is None:
+            print_help()
+            return 0
+        return tunnel_cmd.run(args, config_path)
+    if args.command == "sync":
+        output_path = (
+            Path(args.output) if args.output else platform_default_output_path()
+        )
+        return sync_cmd.run(args, config_path, output_path)
     if args.command == "generate":
         output_path = (
             Path(args.output) if args.output else platform_default_output_path()

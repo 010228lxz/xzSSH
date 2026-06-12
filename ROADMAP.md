@@ -54,69 +54,50 @@ prompt paths, which is now locked in by tests.
 
 ---
 
-## Tier 3 — Larger investments
+## Tier 3 — Shipped ✅
 
-Real design work; would benefit from a spec / RFC before coding.
+All Tier 3 items have shipped (v0.11.0 – v0.15.0):
 
-### Schema versioning + migrations — `[M]`
+- ✅ Schema versioning + migrations — **v0.11.0**. The registry lives
+  in `xzssh/parser/migrations.py` (with the contract in its
+  docstring); `CURRENT_SCHEMA_VERSION` in `xzssh/model/types.py`.
+  Old files are upgraded in memory on every load and written back once
+  through the CLI load path with a `.bak`. Newer-than-supported files
+  are refused. Still on schema v1 — the framework ships ahead of the
+  first real break, as planned.
 
-`Config.version = 1` exists but there's no migration framework. Worth
-setting up the pattern *before* the first schema break, not after.
+- ✅ Multiple profiles — **v0.12.0**. `xzssh profile
+  add/list/use/remove`, `--profile NAME` on every command,
+  `$XZSSH_PROFILE` session override, default profile in the registry.
+  One deviation from the sketch: the registry is
+  `~/.config/xzssh/profiles.json` (JSON, not TOML — Python 3.9 has no
+  stdlib TOML reader and no version has a writer; the dep tree stays
+  rich + questionary).
 
-- Define `MIGRATIONS: Dict[int, Callable[[dict], dict]]` keyed by
-  source version.
-- On load, if file version < current, run migrations in sequence,
-  re-validate, write back with a `.bak`.
-- Document the contract: never lower the version number; never re-use
-  a version number; migrations must be idempotent.
+- ✅ `xzssh sync` — **v0.14.0**. Report mode by default (exit 1 on
+  drift, scriptable), `--prefer json` (regenerate with `.bak`),
+  `--prefer file` (import drift into the JSON, preserving
+  tags/last_used, validated before write), `--interactive` (per-host
+  choice; mixed decisions compose). The importer's `Match`/`Include`
+  warnings did become the merge conflicts predicted here: they gate the
+  json-wins direction behind `--force`/confirmation, while file-wins
+  proceeds with a warning since it never touches the file.
 
-### Multiple profiles — `[M]`
+- ✅ Encrypted JSON at rest — **v0.15.0**. `xzssh encrypt [--tool
+  gpg|age]` / `xzssh decrypt`; envelope detected by magic bytes on
+  load, re-applied on every write. The predicted UX cost is real and
+  documented (passphrase prompt on every operation); completers skip
+  encrypted configs so `<TAB>` never triggers pinentry, and no
+  plaintext `.bak` is ever left behind.
 
-Power users juggle work/personal/client configs. Currently the only
-escape hatch is `--config path/to/other.json`.
-
-- `xzssh profile add work ~/team-ssh.json`
-- `xzssh profile list`
-- `xzssh --profile work connect db`
-- Profile registry at `~/.config/xzssh/profiles.toml` (separate from
-  the SSH-related files).
-- Default profile + per-shell-session override via env var.
-
-### `xzssh sync` — bidirectional with `~/.ssh/config` — `[L]`
-
-Right now the flow is one-way: JSON → generated config. If the user
-edits `~/.ssh/config` by hand (common for one-off settings),
-xzSSH overwrites their changes on the next `generate`. Hard problem
-because:
-
-- Need to detect that the user's file is no longer xzSSH-generated
-  (the header check already catches this, but only as a refusal — not
-  a merge path).
-- Need to re-parse the generated config and detect drift vs. the JSON.
-- Conflict resolution: file-wins / json-wins / interactive merge.
-
-This is where the OpenSSH importer's `Match`/`Include` warnings become
-real merge conflicts.
-
-### Encrypted JSON at rest — `[L]`
-
-The JSON contains identity-file paths, usernames, and hostnames — all
-already restricted to `0600`. Some users will want stronger guarantees.
-
-- Optional `gpg --symmetric` or `age` envelope on the JSON.
-- Decrypt on `load_config`; re-encrypt on `write_config`.
-- Big UX cost (prompts for passphrase on every operation) — only worth
-  it if there's clear demand. Likely behind a `--encrypt` flag and a
-  config-level opt-in.
-
-### `xzssh tunnel <alias>` — `[M]`
-
-Open the `LocalForward` rules defined for a host without starting an
-interactive session. Daemon-style use case.
-
-- `ssh -N -f` for background, or foreground with a clean stop signal.
-- `xzssh tunnel list` to show active tunnels (requires a state file).
-- `xzssh tunnel stop <alias>`.
+- ✅ `xzssh tunnel` — **v0.13.0**. `tunnel start <alias>` (foreground
+  `ssh -N`, Ctrl-C to stop) / `tunnel start --detach` / `tunnel list` /
+  `tunnel stop <alias>|--all`, with a state file in the platform state
+  dir. Two deviations from the sketch: the CLI is `tunnel start
+  <alias>` rather than bare `tunnel <alias>` (so `list`/`stop` can't
+  collide with alias names), and backgrounding uses `Popen` in its own
+  session rather than `ssh -f` (ssh's fork hides the daemon pid, which
+  would make `tunnel stop` impossible).
 
 ---
 

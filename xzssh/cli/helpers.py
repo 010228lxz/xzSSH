@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import List, Optional
 
-from xzssh.cli.ui import print_error
+from xzssh.cli.ui import print_error, print_notice, print_warning
+from xzssh.crypto import encrypt
 from xzssh.model import Config, Host, LocalForward, RemoteForward
-from xzssh.parser import ConfigParseError, load_config
+from xzssh.parser import ConfigParseError, load_config_versioned
 from xzssh.platform import ensure_secure_file_permissions, resolve_path
 
 
@@ -23,10 +25,39 @@ def load_config_if_exists(config_path: Path) -> Optional[Config]:
     if not config_path.exists():
         return None
     try:
-        return load_config(config_path)
+        config, source_version = load_config_versioned(config_path)
     except ConfigParseError as exc:
         print_error(str(exc))
         return None
+    if source_version != config.version:
+        _persist_migrated_config(config_path, config, source_version)
+    return config
+
+
+def _persist_migrated_config(
+    config_path: Path, config: Config, source_version: int
+) -> None:
+    """One-time write-back after an in-memory schema migration.
+
+    The original file is copied to ``.bak`` before the upgraded form is
+    written. On any failure the command keeps running with the migrated
+    in-memory config — migrations are idempotent by contract, so the
+    upgrade simply re-runs on the next load.
+    """
+    backup = config_path.with_name(config_path.name + ".bak")
+    try:
+        shutil.copy2(config_path, backup)
+        write_config(config_path, config)
+    except OSError as exc:
+        print_warning(
+            f"Config schema was migrated in memory but the upgrade could "
+            f"not be saved: {exc}"
+        )
+        return
+    print_notice(
+        f"Config schema upgraded v{source_version} → v{config.version}; "
+        f"previous file saved to {backup}"
+    )
 
 
 def parse_local_forward_arg(raw: str) -> LocalForward:
@@ -84,13 +115,22 @@ def write_config(config_path: Path, config: Config) -> None:
     equivalent), then ``os.replace``\\s into place — so a crash mid-write
     cannot leave the live config truncated. The JSON source contains host
     metadata and identity-file paths and is treated as secret.
-    """
-    config_path.parent.mkdir(parents=True, exist_ok=True)
-    payload = json.dumps(config.to_dict(), indent=2, ensure_ascii=False) + "\n"
 
+    When ``config.encryption`` is set the payload is run through the
+    gpg/age envelope first (prompting for the passphrase); a failed or
+    cancelled prompt raises ``EnvelopeError`` **before** anything is
+    touched on disk, and ``main`` reports it as a clean error.
+    """
+    payload_text = json.dumps(config.to_dict(), indent=2, ensure_ascii=False) + "\n"
+    if config.encryption:
+        payload = encrypt(payload_text, config.encryption)
+    else:
+        payload = payload_text.encode("utf-8")
+
+    config_path.parent.mkdir(parents=True, exist_ok=True)
     tmp_path = config_path.with_name(config_path.name + ".tmp")
     try:
-        tmp_path.write_text(payload, encoding="utf-8")
+        tmp_path.write_bytes(payload)
         # Apply restrictive perms BEFORE moving into place so there's no
         # window where the live file exists with default perms.
         ensure_secure_file_permissions(tmp_path)

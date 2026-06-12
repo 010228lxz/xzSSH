@@ -38,7 +38,7 @@ def _add(args: argparse.Namespace, config_path: Path) -> int:
     with status(f"Adding key reference '{args.name}'"):
         config = load_config_if_exists(config_path)
     if config is None:
-        config = Config(version=1, hosts=[], keys={})
+        config = Config(hosts=[], keys={})
 
     if args.name in config.keys and not args.replace:
         print_error(

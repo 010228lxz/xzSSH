@@ -29,6 +29,14 @@ def validate_config(
     if not isinstance(config.version, int):
         result.errors.append("config.version must be an integer")
 
+    if config.encryption is not None and config.encryption not in (
+        "gpg",
+        "age",
+    ):
+        result.errors.append(
+            "config.encryption must be 'gpg' or 'age' if provided"
+        )
+
     seen_aliases: Set[str] = set()
     local_port_map: Dict[int, List[str]] = {}
     used_ports: Set[int] = set()

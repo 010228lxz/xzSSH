@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
+from xzssh.crypto import EnvelopeError, decrypt, detect_envelope
 from xzssh.model import Config, Host, LocalForward, RemoteForward
+from xzssh.model import types as model_types
+
+from . import migrations
 
 
 class ConfigParseError(ValueError):
@@ -12,10 +16,39 @@ class ConfigParseError(ValueError):
 
 
 def load_config(path: Path) -> Config:
+    config, _ = load_config_versioned(path)
+    return config
+
+
+def load_config_versioned(path: Path) -> Tuple[Config, int]:
+    """Load a config, returning ``(config, source_version)``.
+
+    ``source_version`` is the schema version found in the file. When it
+    is older than ``CURRENT_SCHEMA_VERSION`` the registered migrations
+    are applied **in memory only** — the returned config is already
+    upgraded (``config.version`` is current), but the file is untouched.
+    Persisting the upgrade is the caller's decision; the CLI does it in
+    ``load_config_if_exists`` so every command shares one write-back
+    path.
+    """
     try:
-        raw_text = path.read_text(encoding="utf-8")
+        raw_bytes = path.read_bytes()
     except FileNotFoundError as exc:
         raise ConfigParseError(f"Config file not found: {path}") from exc
+
+    envelope_tool = detect_envelope(raw_bytes)
+    if envelope_tool is not None:
+        try:
+            raw_text = decrypt(raw_bytes, envelope_tool)
+        except EnvelopeError as exc:
+            raise ConfigParseError(f"Could not decrypt {path}: {exc}") from exc
+    else:
+        try:
+            raw_text = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ConfigParseError(
+                f"Config file is not valid UTF-8: {path}"
+            ) from exc
 
     try:
         data = json.loads(raw_text)
@@ -24,6 +57,9 @@ def load_config(path: Path) -> Config:
 
     if not isinstance(data, dict):
         raise ConfigParseError("Config root must be a JSON object")
+
+    source_version = _coerce_int(data.get("version", 1), "version")
+    data = _apply_migrations(data, source_version)
 
     version_value = data.get("version", 1)
     version = _coerce_int(version_value, "version")
@@ -47,7 +83,49 @@ def load_config(path: Path) -> Config:
             raise ConfigParseError(f"Host entry at index {idx} must be an object")
         hosts.append(_parse_host(host_data, idx))
 
-    return Config(version=version, hosts=hosts, keys=keys)
+    encryption = _optional_str(data, "encryption")
+    if envelope_tool is not None:
+        # The file's actual state wins over the stored field, so a
+        # manually-encrypted config round-trips encrypted.
+        encryption = envelope_tool
+
+    return (
+        Config(version=version, hosts=hosts, keys=keys, encryption=encryption),
+        source_version,
+    )
+
+
+def _apply_migrations(data: Dict[str, Any], source_version: int) -> Dict[str, Any]:
+    """Upgrade a raw config dict to the current schema, step by step.
+
+    Reads ``CURRENT_SCHEMA_VERSION`` and ``MIGRATIONS`` through their
+    modules (not from-imports) so tests can monkeypatch them. The
+    ``version`` field is stamped here after each step — migrations
+    don't have to remember to do it.
+    """
+    current = model_types.CURRENT_SCHEMA_VERSION
+    if source_version > current:
+        raise ConfigParseError(
+            f"Config schema v{source_version} is newer than this xzSSH "
+            f"understands (v{current}). Upgrade xzSSH to read this file."
+        )
+
+    version = source_version
+    while version < current:
+        migrate = migrations.MIGRATIONS.get(version)
+        if migrate is None:
+            raise ConfigParseError(
+                f"No migration registered for config schema v{version} "
+                f"(current is v{current}); cannot upgrade this file"
+            )
+        data = migrate(data)
+        if not isinstance(data, dict):
+            raise ConfigParseError(
+                f"Migration from schema v{version} did not return an object"
+            )
+        version += 1
+        data["version"] = version
+    return data
 
 
 def _parse_keys(data: Dict[str, Any]) -> Dict[str, str]:

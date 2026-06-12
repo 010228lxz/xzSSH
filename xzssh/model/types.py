@@ -3,6 +3,11 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
 
+# Schema version this code reads and writes. Bumping it requires
+# registering a migration in xzssh/parser/migrations.py — see the
+# contract documented there. Never lower it, never re-use a number.
+CURRENT_SCHEMA_VERSION = 1
+
 
 @dataclass
 class LocalForward:
@@ -93,13 +98,20 @@ class Host:
 
 @dataclass
 class Config:
-    version: int = 1
+    version: int = CURRENT_SCHEMA_VERSION
     hosts: List[Host] = field(default_factory=list)
     keys: Dict[str, str] = field(default_factory=dict)
+    # At-rest encryption opt-in: "gpg" or "age" (None = plaintext). The
+    # field travels inside the (decrypted) JSON, so the choice survives
+    # round-trips; write_config envelopes the file whenever it is set.
+    encryption: Optional[str] = None
 
     def to_dict(self) -> Dict[str, object]:
-        return {
+        data: Dict[str, object] = {
             "version": self.version,
             "hosts": [host.to_dict() for host in self.hosts],
             "keys": dict(self.keys),
         }
+        if self.encryption is not None:
+            data["encryption"] = self.encryption
+        return data

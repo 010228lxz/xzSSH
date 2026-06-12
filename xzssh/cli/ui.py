@@ -87,6 +87,14 @@ def print_info(message: str):
     """Prints an info message."""
     console.print(f"[info]ℹ[/info] {message}")
 
+def print_notice(message: str):
+    """Prints an info-styled message to STDERR.
+
+    For notices emitted during config loading — they must not corrupt
+    the stdout of piped commands like `xzssh export > backup.json`.
+    """
+    error_console.print(f"[info]ℹ[/info] {message}")
+
 def print_host_status(alias: str, host_name: str, status: str):
     """Prints a styled status line for a host."""
     icon = "[success]●[/success]" if status == "online" else "[error]○[/error]"
@@ -286,6 +294,61 @@ def prompt_select_host(hosts: List[Any], message: str = "Select a host to manage
     
     return prompt_select_action(message, choices, shortcuts)
 
+def print_profile_table(rows: List[Any]):
+    """Prints registered profiles. Rows are (name, path, is_default, exists)."""
+    if not rows:
+        console.print(
+            "[muted]No profiles registered. "
+            "Add one with `xzssh profile add <name> <path>`.[/muted]"
+        )
+        return
+
+    table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold underline")
+    table.add_column("Profile", style="alias", no_wrap=True)
+    table.add_column("Config Path", style="host")
+    table.add_column("Default", style="tag")
+    table.add_column("Exists", style="muted")
+
+    for name, path, is_default, exists in rows:
+        table.add_row(
+            name,
+            path,
+            "[success]✔[/success]" if is_default else "[muted]-[/muted]",
+            "yes" if exists else "[warning]not yet[/warning]",
+        )
+
+    console.print(table)
+
+def print_tunnel_table(rows: List[Any]):
+    """Prints recorded tunnels. Rows are (alias, pid, alive, started_at, forwards)."""
+    if not rows:
+        console.print(
+            "[muted]No tunnels recorded. "
+            "Start one with `xzssh tunnel start <alias> --detach`.[/muted]"
+        )
+        return
+
+    table = Table(box=None, padding=(0, 2), show_header=True, header_style="bold underline")
+    table.add_column("Alias", style="alias", no_wrap=True)
+    table.add_column("PID", style="port")
+    table.add_column("Status")
+    table.add_column("Started", style="last_used")
+    table.add_column("Forwards", style="tag")
+
+    for alias, pid, alive, started_at, forwards in rows:
+        status_str = (
+            "[success]● up[/success]" if alive else "[error]○ dead[/error]"
+        )
+        table.add_row(
+            alias,
+            str(pid),
+            status_str,
+            started_at or "[muted]-[/muted]",
+            ", ".join(forwards) if forwards else "[muted]-[/muted]",
+        )
+
+    console.print(table)
+
 def print_key_table(keys: dict[str, str]):
     """Prints a styled table of keys."""
     if not keys:
@@ -318,6 +381,7 @@ def print_help():
         ("which <alias>", "Print the resolved ssh command without running it"),
         ("search <query>", "Search hosts by alias, hostname, user, or tag"),
         ("test [alias]", "Probe connectivity without opening a shell"),
+        ("tunnel start <alias>", "Open the host's forwards without a shell"),
         ("add", "Interactively add a new host"),
         ("edit <alias>", "Edit a host's JSON entry in $EDITOR"),
         ("remove [alias...]", "Remove one or more hosts by alias"),
@@ -325,9 +389,12 @@ def print_help():
         ("export", "Print a JSON snapshot of the config"),
         ("import-json <file>", "Restore config from a JSON snapshot"),
         ("check", "Analyze configuration for errors"),
+        ("sync", "Detect/resolve drift with ~/.ssh/config"),
+        ("encrypt / decrypt", "Toggle at-rest encryption of the JSON (gpg/age)"),
         ("generate", "Generate ~/.ssh/config"),
         ("menu", "Open interactive management menu"),
         ("key", "Manage private keys and ssh-agent"),
+        ("profile", "Manage config profiles (work/personal/...)"),
     ]
     
     for cmd, desc in commands:
@@ -338,6 +405,7 @@ def print_help():
     console.print("\n[bold]Global Options:[/bold]")
     options = [
         ("--config CONFIG", "Path to JSON config file"),
+        ("--profile NAME", "Use a registered profile's config file"),
         ("--suggest-ports", "Suggest free ports on conflicts"),
         ("-h, --help", "Show this help message and exit"),
     ]

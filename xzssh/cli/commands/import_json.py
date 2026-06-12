@@ -83,7 +83,7 @@ def _do_replace(incoming: Config, config_path: Path) -> int:
 
 
 def _do_merge(incoming: Config, config_path: Path) -> int:
-    existing = load_config_if_exists(config_path) or Config(version=1, hosts=[])
+    existing = load_config_if_exists(config_path) or Config(hosts=[])
 
     existing_aliases = {h.alias for h in existing.hosts}
     added = 0
