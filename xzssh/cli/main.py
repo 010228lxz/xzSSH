@@ -7,7 +7,9 @@ from xzssh.cli.commands import (
     add as add_cmd,
     check as check_cmd,
     connect as connect_cmd,
+    decrypt as decrypt_cmd,
     edit as edit_cmd,
+    encrypt as encrypt_cmd,
     export as export_cmd,
     generate as generate_cmd,
     import_ as import_cmd,
@@ -27,6 +29,7 @@ from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
 from xzssh.cli.profiles import ProfileError, registry_path, resolve_config_path
 from xzssh.cli.ui import print_banner, print_error, print_help
+from xzssh.crypto import EnvelopeError
 from xzssh.platform import (
     default_output_path as platform_default_output_path,
 )
@@ -62,6 +65,18 @@ def main(argv: Optional[List[str]] = None) -> int:
         print_error(str(exc))
         return 2
 
+    # Single choke point for envelope failures (cancelled pinentry,
+    # wrong passphrase on re-encrypt, missing gpg/age binary): every
+    # command writes through write_config, which raises EnvelopeError
+    # before touching the file.
+    try:
+        return _dispatch(args, config_path)
+    except EnvelopeError as exc:
+        print_error(str(exc))
+        return 1
+
+
+def _dispatch(args, config_path: Path) -> int:
     if args.command is None:
         return menu_cmd.default_menu(config_path, args.suggest_ports)
 
@@ -107,6 +122,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command == "encrypt":
+        return encrypt_cmd.run(args, config_path)
+    if args.command == "decrypt":
+        return decrypt_cmd.run(args, config_path)
     if args.command == "tunnel":
         if getattr(args, "tunnel_command", None) is None:
             print_help()

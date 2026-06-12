@@ -54,9 +54,9 @@ prompt paths, which is now locked in by tests.
 
 ---
 
-## Tier 3 — Larger investments
+## Tier 3 — Shipped ✅
 
-Real design work; would benefit from a spec / RFC before coding.
+All Tier 3 items have shipped (v0.11.0 – v0.15.0):
 
 - ✅ Schema versioning + migrations — **v0.11.0**. The registry lives
   in `xzssh/parser/migrations.py` (with the contract in its
@@ -83,16 +83,12 @@ Real design work; would benefit from a spec / RFC before coding.
   json-wins direction behind `--force`/confirmation, while file-wins
   proceeds with a warning since it never touches the file.
 
-### Encrypted JSON at rest — `[L]`
-
-The JSON contains identity-file paths, usernames, and hostnames — all
-already restricted to `0600`. Some users will want stronger guarantees.
-
-- Optional `gpg --symmetric` or `age` envelope on the JSON.
-- Decrypt on `load_config`; re-encrypt on `write_config`.
-- Big UX cost (prompts for passphrase on every operation) — only worth
-  it if there's clear demand. Likely behind a `--encrypt` flag and a
-  config-level opt-in.
+- ✅ Encrypted JSON at rest — **v0.15.0**. `xzssh encrypt [--tool
+  gpg|age]` / `xzssh decrypt`; envelope detected by magic bytes on
+  load, re-applied on every write. The predicted UX cost is real and
+  documented (passphrase prompt on every operation); completers skip
+  encrypted configs so `<TAB>` never triggers pinentry, and no
+  plaintext `.bak` is ever left behind.
 
 - ✅ `xzssh tunnel` — **v0.13.0**. `tunnel start <alias>` (foreground
   `ssh -N`, Ctrl-C to stop) / `tunnel start --detach` / `tunnel list` /

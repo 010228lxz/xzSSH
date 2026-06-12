@@ -390,6 +390,7 @@ def print_help():
         ("import-json <file>", "Restore config from a JSON snapshot"),
         ("check", "Analyze configuration for errors"),
         ("sync", "Detect/resolve drift with ~/.ssh/config"),
+        ("encrypt / decrypt", "Toggle at-rest encryption of the JSON (gpg/age)"),
         ("generate", "Generate ~/.ssh/config"),
         ("menu", "Open interactive management menu"),
         ("key", "Manage private keys and ssh-agent"),

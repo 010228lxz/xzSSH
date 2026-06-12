@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from xzssh.crypto import EnvelopeError, decrypt, detect_envelope
 from xzssh.model import Config, Host, LocalForward, RemoteForward
 from xzssh.model import types as model_types
 
@@ -31,9 +32,23 @@ def load_config_versioned(path: Path) -> Tuple[Config, int]:
     path.
     """
     try:
-        raw_text = path.read_text(encoding="utf-8")
+        raw_bytes = path.read_bytes()
     except FileNotFoundError as exc:
         raise ConfigParseError(f"Config file not found: {path}") from exc
+
+    envelope_tool = detect_envelope(raw_bytes)
+    if envelope_tool is not None:
+        try:
+            raw_text = decrypt(raw_bytes, envelope_tool)
+        except EnvelopeError as exc:
+            raise ConfigParseError(f"Could not decrypt {path}: {exc}") from exc
+    else:
+        try:
+            raw_text = raw_bytes.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ConfigParseError(
+                f"Config file is not valid UTF-8: {path}"
+            ) from exc
 
     try:
         data = json.loads(raw_text)
@@ -68,7 +83,16 @@ def load_config_versioned(path: Path) -> Tuple[Config, int]:
             raise ConfigParseError(f"Host entry at index {idx} must be an object")
         hosts.append(_parse_host(host_data, idx))
 
-    return Config(version=version, hosts=hosts, keys=keys), source_version
+    encryption = _optional_str(data, "encryption")
+    if envelope_tool is not None:
+        # The file's actual state wins over the stored field, so a
+        # manually-encrypted config round-trips encrypted.
+        encryption = envelope_tool
+
+    return (
+        Config(version=version, hosts=hosts, keys=keys, encryption=encryption),
+        source_version,
+    )
 
 
 def _apply_migrations(data: Dict[str, Any], source_version: int) -> Dict[str, Any]:

@@ -107,6 +107,7 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `import-json <file>` | Restore the config from a JSON snapshot (`--merge` / `--replace`). |
 | `check` | Analyze configuration for errors or port conflicts. |
 | `sync` | Detect drift with `~/.ssh/config`; resolve with `--prefer json/file` or `--interactive`. |
+| `encrypt` / `decrypt` | Toggle at-rest encryption of the JSON config (`gpg` or `age` envelope). |
 | `generate` | Regenerate the final `~/.ssh/config` file. |
 | `key` | Manage private keys and integrate with `ssh-agent`. |
 | `profile` | Manage config profiles: `add`, `list`, `use`, `remove`. |

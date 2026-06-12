@@ -271,6 +271,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-host connect timeout (default: 5)",
     )
 
+    encrypt_parser = subparsers.add_parser(
+        "encrypt",
+        parents=[parent],
+        help="Encrypt the JSON config at rest (gpg or age envelope)",
+    )
+    encrypt_parser.add_argument(
+        "--tool",
+        choices=["gpg", "age"],
+        default="gpg",
+        help="Encryption tool to use (default: gpg, symmetric AES256)",
+    )
+
+    subparsers.add_parser(
+        "decrypt",
+        parents=[parent],
+        help="Store the JSON config as plaintext again",
+    )
+
     sync_parser = subparsers.add_parser(
         "sync",
         parents=[parent],

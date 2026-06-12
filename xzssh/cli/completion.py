@@ -20,6 +20,7 @@ from xzssh.cli.profiles import (
     registry_path,
     resolve_config_path,
 )
+from xzssh.crypto import detect_envelope
 from xzssh.parser import ConfigParseError, load_config
 from xzssh.platform import default_config_path
 
@@ -41,6 +42,20 @@ def _completion_config_path(parsed_args) -> Path:
         return default_config_path()
 
 
+def _load_for_completion(config_path: Path):
+    """Load a config for completion purposes, or None.
+
+    An encrypted config is deliberately skipped: ``load_config`` would
+    shell out to gpg/age, and a passphrase prompt in the middle of
+    <TAB> completion is hostile.
+    """
+    if not config_path.exists():
+        return None
+    if detect_envelope(config_path.read_bytes()) is not None:
+        return None
+    return load_config(config_path)
+
+
 def alias_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
     """argcomplete completer that returns host aliases.
 
@@ -50,11 +65,10 @@ def alias_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
     returns an empty list rather than blowing up the shell.
     """
     try:
-        config_path = _completion_config_path(parsed_args)
-        if not config_path.exists():
-            return []
-        config = load_config(config_path)
+        config = _load_for_completion(_completion_config_path(parsed_args))
     except (ConfigParseError, OSError, ValueError):
+        return []
+    if config is None:
         return []
 
     return _matches(prefix, (h.alias for h in config.hosts))
@@ -63,11 +77,10 @@ def alias_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
 def key_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
     """argcomplete completer that returns configured key names (for ``key add-agent``)."""
     try:
-        config_path = _completion_config_path(parsed_args)
-        if not config_path.exists():
-            return []
-        config = load_config(config_path)
+        config = _load_for_completion(_completion_config_path(parsed_args))
     except (ConfigParseError, OSError, ValueError):
+        return []
+    if config is None:
         return []
 
     return _matches(prefix, config.keys.keys())
