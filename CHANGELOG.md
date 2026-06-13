@@ -9,6 +9,123 @@ during the 0.x series.
 
 ## [Unreleased]
 
+## [0.19.0] — 2026-06-13
+
+Closes out Tier 4 — the roadmap backlog is now empty (remaining
+speculative items were explicitly declined and moved to *Not
+planned*).
+
+### Added
+
+- **macOS Keychain integration** — `xzssh key add-agent <name>
+  --keychain` passes `--apple-use-keychain` to `ssh-add`, storing the
+  passphrase in the Keychain so subsequent loads don't prompt. Off
+  macOS the flag is a clean usage error (exit 2), not a silent no-op.
+- **`--match-all` on `list` and `connect`** — AND semantics across
+  repeated `--tag` flags (`xzssh list --tag prod --tag db
+  --match-all` = "prod databases"). This is the roadmap's own
+  resolution of the groups/folders item: tags + multi-tag filtering,
+  no hierarchy. Default OR behaviour is unchanged.
+
+### Roadmap
+
+- Declined and documented under *Not planned*: the `textual` TUI
+  dashboard (big dep + menu rewrite against the small-dep-tree
+  principle) and any web/desktop GUI.
+
+## [0.18.0] — 2026-06-12
+
+### Added
+
+- **`xzssh scp` / `xzssh sftp` / `xzssh rsync`** — alias-aware
+  wrappers around the real binaries:
+  - Non-flag tokens of the form `<alias>:<path>` are rewritten to
+    `user@hostname:<path>`; for sftp a bare `<alias>` works too (its
+    positional *is* the host). Tokens that don't match a configured
+    alias — local paths, `C:\…`, unknown prefixes — pass through
+    untouched.
+  - With exactly one alias referenced, the host's connection options
+    are injected: `-P port -i identity -J jump -o Key=Value` for
+    scp/sftp, `-e "ssh -p …"` for rsync (where `-P` would mean
+    `--partial --progress`). With several aliases (remote→remote) the
+    targets are still rewritten but per-host options are left to the
+    generated `~/.ssh/config`, with a notice.
+  - The wrapped tool's exit code propagates verbatim; a missing binary
+    exits 127. `--dry-run` prints the resolved command (raw stdout,
+    `$(...)`-safe).
+  - Banner-suppressed like `which`/`export` — transfer output is often
+    piped.
+  - xzSSH's own flags go right after the subcommand; use the standard
+    `--` separator when the tool's first argument starts with a dash
+    (`xzssh rsync -- -az db:/data/ backup/`).
+
+## [0.17.0] — 2026-06-12
+
+### Added
+
+- **Themes.** The neon palette is now one of four:
+  - `neon` (default, unchanged), `classic` (sober ANSI colors that
+    respect the terminal's own scheme), `high-contrast` (bright, bold,
+    no dim text), and `mono` (no color at all — emphasis only; for
+    pipes, screenshots, and monochrome terminals).
+  - Resolution: `--theme NAME` (one invocation) > `$XZSSH_THEME` (one
+    shell session) > the preference saved by `xzssh theme <name>` >
+    default. `xzssh theme` lists themes; `--unset` clears the saved
+    preference.
+  - The preference is stored in the profiles registry
+    (`~/.config/xzssh/profiles.json`) — it is CLI configuration, not
+    SSH data, so it never touches `xzssh.json`.
+  - All styling now flows through semantic style names + the active
+    palette, including the banner and the questionary prompts; an
+    unknown theme from env/registry degrades to the default with a
+    stderr warning instead of failing the command.
+
+### Fixed
+
+- **Global flags before the subcommand were silently ignored on
+  Python 3.13+** — `xzssh --config foo list` used the default config
+  because argparse subparser defaults clobber already-parsed values in
+  the shared namespace. The subparser copies of `--config`,
+  `--profile`, `--theme`, and `--suggest-ports` now use
+  `default=SUPPRESS`, so both positions work on every supported
+  Python.
+
+## [0.16.0] — 2026-06-12
+
+First Tier 4 items: the connection event log and the history view that
+the roadmap said should ship together (history needs the exit codes
+only a log can provide).
+
+### Added
+
+- **Connection event log (opt-in)** — `xzssh history enable [--file
+  PATH]` sets `Config.event_log`; from then on every `xzssh connect`
+  appends one JSON line (timestamp, alias, target, **exit code**,
+  duration) to the log. Default path is `xzssh.log` *next to the
+  config file* (the value is stored relative, so each profile gets its
+  own log). `history disable` stops logging (keeps the file);
+  `history clear` deletes the file.
+- **`xzssh history [--limit N]`** — the last connections (default 50),
+  newest first: timestamp, alias, target, exit code (✔ for 0, red
+  otherwise), duration. Failed connects are shown too — that's the
+  point.
+
+### Security / privacy
+
+- Strictly **opt-in**; nothing is ever written unless `event_log` is
+  set.
+- Hosts tagged **`no-log`** are never recorded, as the roadmap
+  required.
+- The log file is created `0600` — it reveals when and where you
+  connect.
+
+### Behavior notes
+
+- Logging is best-effort: an unwritable log degrades to a warning and
+  never changes `connect`'s exit code (which still propagates ssh's).
+- `--dry-run` connects are not logged; corrupt log lines are skipped
+  on read (disposable-state posture, like the tunnel file).
+
 ## [0.15.0] — 2026-06-12
 
 Closes out Tier 3.
@@ -489,7 +606,11 @@ First public release.
   not generated by xzSSH** unless `--force` is passed. A `.bak` copy
   is saved whenever an existing file is overwritten.
 
-[Unreleased]: https://github.com/010228lxz/xzSSH/compare/v0.15.0...HEAD
+[Unreleased]: https://github.com/010228lxz/xzSSH/compare/v0.19.0...HEAD
+[0.19.0]: https://github.com/010228lxz/xzSSH/compare/v0.18.0...v0.19.0
+[0.18.0]: https://github.com/010228lxz/xzSSH/compare/v0.17.0...v0.18.0
+[0.17.0]: https://github.com/010228lxz/xzSSH/compare/v0.16.0...v0.17.0
+[0.16.0]: https://github.com/010228lxz/xzSSH/compare/v0.15.0...v0.16.0
 [0.15.0]: https://github.com/010228lxz/xzSSH/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/010228lxz/xzSSH/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/010228lxz/xzSSH/compare/v0.12.0...v0.13.0

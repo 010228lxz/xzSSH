@@ -7,23 +7,39 @@ from xzssh.cli.completion import (
     key_completer,
     profile_completer,
 )
+from xzssh.cli.ui import available_themes
 
 
 def build_parser() -> argparse.ArgumentParser:
+    # The same global options exist on the top-level parser AND (via this
+    # parent) on every subparser, so they work in either position. The
+    # subparser copies use default=SUPPRESS: without it, a subparser that
+    # doesn't see the flag writes its default into the shared namespace,
+    # silently clobbering a value parsed before the subcommand
+    # (`xzssh --config foo list`) on Python 3.13+.
     parent = argparse.ArgumentParser(add_help=False)
     parent.add_argument(
         "--config",
+        default=argparse.SUPPRESS,
         help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
     )
     parent_profile = parent.add_argument(
         "--profile",
         metavar="NAME",
+        default=argparse.SUPPRESS,
         help="Use a registered profile's config file (see `xzssh profile`)",
     )
     parent_profile.completer = profile_completer  # type: ignore[attr-defined]
     parent.add_argument(
+        "--theme",
+        choices=available_themes(),
+        default=argparse.SUPPRESS,
+        help="UI color theme for this invocation (see `xzssh theme`)",
+    )
+    parent.add_argument(
         "--suggest-ports",
         action="store_true",
+        default=argparse.SUPPRESS,
         help="Suggest next free LocalForward port when conflicts are found",
     )
 
@@ -38,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Use a registered profile's config file (see `xzssh profile`)",
     )
     top_profile.completer = profile_completer  # type: ignore[attr-defined]
+    parser.add_argument(
+        "--theme",
+        choices=available_themes(),
+        help="UI color theme for this invocation (see `xzssh theme`)",
+    )
     parser.add_argument(
         "--suggest-ports",
         action="store_true",
@@ -62,6 +83,11 @@ def build_parser() -> argparse.ArgumentParser:
             " any of the given tags)"
         ),
     )
+    list_parser.add_argument(
+        "--match-all",
+        action="store_true",
+        help="Require ALL given --tag values instead of any (AND semantics)",
+    )
 
     connect_parser = subparsers.add_parser(
         "connect", parents=[parent], help="Connect to a host"
@@ -79,6 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Restrict fuzzy-search choices to hosts with this tag (repeatable;"
             " OR semantics; has no effect when <alias> is given explicitly)"
         ),
+    )
+    connect_parser.add_argument(
+        "--match-all",
+        action="store_true",
+        help="Require ALL given --tag values instead of any (AND semantics)",
     )
     connect_parser.add_argument(
         "--dry-run",
@@ -271,6 +302,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Per-host connect timeout (default: 5)",
     )
 
+    history_parser = subparsers.add_parser(
+        "history",
+        parents=[parent],
+        help="Show recent connections (from the opt-in event log)",
+    )
+    history_parser.add_argument(
+        "--limit",
+        type=int,
+        default=50,
+        metavar="N",
+        help="Show at most N entries (default: 50)",
+    )
+    history_subparsers = history_parser.add_subparsers(
+        dest="history_command", required=False
+    )
+    history_enable = history_subparsers.add_parser(
+        "enable", parents=[parent], help="Opt in to connection logging"
+    )
+    history_enable.add_argument(
+        "--file",
+        metavar="PATH",
+        help="Log file path (default: xzssh.log next to the config file)",
+    )
+    history_subparsers.add_parser(
+        "disable", parents=[parent], help="Stop logging (keeps the log file)"
+    )
+    history_subparsers.add_parser(
+        "clear", parents=[parent], help="Delete the log file"
+    )
+
     encrypt_parser = subparsers.add_parser(
         "encrypt",
         parents=[parent],
@@ -413,6 +474,41 @@ def build_parser() -> argparse.ArgumentParser:
     profile_remove_name = profile_remove.add_argument("name")
     profile_remove_name.completer = profile_completer  # type: ignore[attr-defined]
 
+    for tool, tool_help in (
+        ("scp", "Run scp with alias rewriting (db:/path → user@host:/path)"),
+        ("sftp", "Run sftp against an alias"),
+        ("rsync", "Run rsync with alias rewriting and -e ssh options"),
+    ):
+        tool_parser = subparsers.add_parser(tool, parents=[parent], help=tool_help)
+        tool_parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help=f"Print the resolved {tool} command without running it",
+        )
+        tool_parser.add_argument(
+            "args",
+            nargs=argparse.REMAINDER,
+            metavar="ARGS",
+            help=f"Arguments passed to {tool}; <alias>:<path> tokens are "
+            "rewritten. xzssh's own flags come first; use `--` before "
+            f"{tool} flags (e.g. `xzssh {tool} -- -r ...`)",
+        )
+
+    theme_parser = subparsers.add_parser(
+        "theme", parents=[parent], help="Show or set the UI color theme"
+    )
+    theme_parser.add_argument(
+        "name",
+        nargs="?",
+        choices=available_themes(),
+        help="Theme to persist as your preference",
+    )
+    theme_parser.add_argument(
+        "--unset",
+        action="store_true",
+        help="Clear the persisted theme preference",
+    )
+
     key_parser = subparsers.add_parser("key", parents=[parent], help="Manage keys")
     key_subparsers = key_parser.add_subparsers(dest="key_command", required=False)
 
@@ -434,5 +530,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     key_add_agent_name = key_add_agent.add_argument("name")
     key_add_agent_name.completer = key_completer  # type: ignore[attr-defined]
+    key_add_agent.add_argument(
+        "--keychain",
+        action="store_true",
+        help="macOS only: store the passphrase in the Keychain "
+        "(ssh-add --apple-use-keychain), so later loads don't prompt",
+    )
 
     return parser

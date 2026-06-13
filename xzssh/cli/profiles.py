@@ -61,11 +61,17 @@ class ProfileError(ValueError):
 class ProfileRegistry:
     default: Optional[str] = None
     profiles: Dict[str, str] = field(default_factory=dict)
+    # Persisted UI theme preference (`xzssh theme <name>`). Lives here
+    # because this file is xzSSH's CLI configuration home — it is not
+    # SSH data and must not live in xzssh.json.
+    theme: Optional[str] = None
 
     def to_dict(self) -> Dict[str, object]:
         data: Dict[str, object] = {"profiles": dict(self.profiles)}
         if self.default is not None:
             data["default"] = self.default
+        if self.theme is not None:
+            data["theme"] = self.theme
         return data
 
 
@@ -113,7 +119,11 @@ def load_registry(path: Path) -> ProfileRegistry:
     if default is not None and not isinstance(default, str):
         raise ProfileError(f"'default' must be a string in {path}")
 
-    return ProfileRegistry(default=default, profiles=profiles)
+    theme = data.get("theme")
+    if theme is not None and not isinstance(theme, str):
+        raise ProfileError(f"'theme' must be a string in {path}")
+
+    return ProfileRegistry(default=default, profiles=profiles, theme=theme)
 
 
 def save_registry(path: Path, registry: ProfileRegistry) -> None:
@@ -181,3 +191,35 @@ def resolve_config_path(
         return profile_config_path(registry, name)
     except ProfileError as exc:
         raise ProfileError(f"{exc} (selected via {source})") from exc
+
+
+def resolve_theme(theme_arg: Optional[str]) -> "tuple[str, Optional[str]]":
+    """Pick the UI theme: ``--theme`` > ``$XZSSH_THEME`` > registry > default.
+
+    Returns ``(name, warning)``. The flag value is already validated by
+    argparse; a bad env/registry value degrades to the default with a
+    warning instead of bricking the CLI — and a broken registry is left
+    for config-path resolution to report, not theming.
+    """
+    from xzssh.cli.ui import DEFAULT_THEME, available_themes
+
+    if theme_arg:
+        return theme_arg, None
+
+    name = os.environ.get("XZSSH_THEME") or None
+    source = "$XZSSH_THEME"
+    if not name:
+        try:
+            registry = load_registry(registry_path())
+        except ProfileError:
+            return DEFAULT_THEME, None
+        name = registry.theme
+        source = "the profiles registry"
+    if not name:
+        return DEFAULT_THEME, None
+    if name not in available_themes():
+        return DEFAULT_THEME, (
+            f"Ignoring unknown theme '{name}' from {source} "
+            f"(available: {', '.join(available_themes())})"
+        )
+    return name, None

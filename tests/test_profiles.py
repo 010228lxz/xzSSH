@@ -117,6 +117,17 @@ def test_registry_file_is_0600(tmp_path: Path) -> None:
 # resolution: --profile / $XZSSH_PROFILE / default / --config
 # ---------------------------------------------------------------------------
 
+def test_global_flags_work_before_the_subcommand(tmp_path: Path) -> None:
+    """Regression: on Python 3.13+ subparser defaults clobbered globals
+    parsed before the subcommand (`xzssh --config foo list`)."""
+    config_path = tmp_path / "xzssh.json"
+    _seed(config_path, "db", "db.example.com")
+
+    assert main(["--config", str(config_path), "list"]) == 0
+    main(["profile", "add", "work", str(config_path)])
+    assert main(["--profile", "work", "list"]) == 0
+
+
 def test_profile_flag_routes_commands(tmp_path: Path) -> None:
     work_config = tmp_path / "work.json"
     main(["profile", "add", "work", str(work_config)])

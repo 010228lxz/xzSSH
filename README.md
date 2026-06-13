@@ -93,12 +93,14 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 
 | Command | Description |
 | :--- | :--- |
-| `list [--tag T]` | Display all configured hosts in a styled table (filter by tag). |
+| `list [--tag T]` | Display all configured hosts in a styled table (filter by tag; `--match-all` for AND semantics). |
 | `connect [alias]` | Quickly connect to a host via alias or fuzzy search (`--dry-run` to preview). |
 | `which <alias>` | Print the resolved `ssh` command line without running it. |
 | `search <query>` | Search hosts by alias, hostname, user, tag, or proxy-jump. |
 | `test [alias]` | Probe connectivity (`--all` for every host) without opening a shell. |
 | `tunnel start <alias>` | Open the host's port-forwards without a shell (`--detach` to background; `tunnel list` / `tunnel stop`). |
+| `history` | Recent connections with exit codes (opt-in: `history enable`; hosts tagged `no-log` are never recorded). |
+| `scp` / `sftp` / `rsync` | Transfer wrappers that rewrite `alias:path` and inject the host's port/identity/jump options. |
 | `add` | Add a host — interactively, or via flags (`--proxy-jump`, `--tag`, forwards, …). |
 | `edit <alias>` | Edit a host's JSON entry in `$EDITOR`, re-validated on save. |
 | `remove [alias...]` | Remove one or more hosts by alias (`--dry-run` to preview). |
@@ -109,8 +111,9 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `sync` | Detect drift with `~/.ssh/config`; resolve with `--prefer json/file` or `--interactive`. |
 | `encrypt` / `decrypt` | Toggle at-rest encryption of the JSON config (`gpg` or `age` envelope). |
 | `generate` | Regenerate the final `~/.ssh/config` file. |
-| `key` | Manage private keys and integrate with `ssh-agent`. |
+| `key` | Manage private keys and integrate with `ssh-agent` (`add-agent --keychain` on macOS). |
 | `profile` | Manage config profiles: `add`, `list`, `use`, `remove`. |
+| `theme` | UI color theme: `neon` (default), `classic`, `high-contrast`, `mono`. Also `--theme` / `$XZSSH_THEME`. |
 
 ### 👤 Profiles
 

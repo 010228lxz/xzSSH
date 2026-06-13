@@ -12,6 +12,7 @@ from xzssh.cli.commands import (
     encrypt as encrypt_cmd,
     export as export_cmd,
     generate as generate_cmd,
+    history as history_cmd,
     import_ as import_cmd,
     import_json as import_json_cmd,
     key as key_cmd,
@@ -22,13 +23,26 @@ from xzssh.cli.commands import (
     search as search_cmd,
     sync as sync_cmd,
     test as test_cmd,
+    theme as theme_cmd,
+    transfer as transfer_cmd,
     tunnel as tunnel_cmd,
     which as which_cmd,
 )
 from xzssh.cli.completion import install_argcomplete
 from xzssh.cli.parser import build_parser
-from xzssh.cli.profiles import ProfileError, registry_path, resolve_config_path
-from xzssh.cli.ui import print_banner, print_error, print_help
+from xzssh.cli.profiles import (
+    ProfileError,
+    registry_path,
+    resolve_config_path,
+    resolve_theme,
+)
+from xzssh.cli.ui import (
+    apply_theme,
+    print_banner,
+    print_error,
+    print_help,
+    print_warning,
+)
 from xzssh.crypto import EnvelopeError
 from xzssh.platform import (
     default_output_path as platform_default_output_path,
@@ -42,20 +56,32 @@ def main(argv: Optional[List[str]] = None) -> int:
     install_argcomplete(parser)
     args = parser.parse_args(argv)
 
+    # Theme first — everything below prints. The flag value is already
+    # argparse-validated; bad env/registry values degrade with a warning
+    # (to stderr, so quiet commands' stdout stays clean).
+    theme_name, theme_warning = resolve_theme(getattr(args, "theme", None))
+    apply_theme(theme_name)
+    if theme_warning:
+        print_warning(theme_warning)
+
     if getattr(args, "help", False):
         print_banner()
         print_help()
         return 0
 
-    # `profile` is dispatched BEFORE config-path resolution: a dangling
-    # default profile must never lock the user out of the very commands
-    # needed to repair the registry.
+    # `profile` and `theme` are dispatched BEFORE config-path resolution:
+    # a dangling default profile must never lock the user out of the very
+    # commands needed to repair the registry.
     if args.command == "profile":
         print_banner()
         if getattr(args, "profile_command", None) is None:
             print_help()
             return 0
         return profile_cmd.run(args, registry_path())
+
+    if args.command == "theme":
+        print_banner()
+        return theme_cmd.run(args, registry_path())
 
     try:
         config_path = resolve_config_path(
@@ -82,8 +108,9 @@ def _dispatch(args, config_path: Path) -> int:
 
     # Commands whose stdout is meant to be captured or piped must NOT emit
     # the decorative banner — it would corrupt redirected output (e.g.
-    # `xzssh export > backup.json`, `$(xzssh which db)`).
-    QUIET_COMMANDS = {"which", "search", "export"}
+    # `xzssh export > backup.json`, `$(xzssh which db)`). The transfer
+    # wrappers are quiet too: rsync/scp output is often piped or parsed.
+    QUIET_COMMANDS = {"which", "search", "export", "scp", "sftp", "rsync"}
     if args.command not in QUIET_COMMANDS:
         print_banner()
 
@@ -100,6 +127,7 @@ def _dispatch(args, config_path: Path) -> int:
             config_path,
             args.suggest_ports,
             tags=getattr(args, "tag", None) or [],
+            match_all=getattr(args, "match_all", False),
         )
     if args.command == "connect":
         return connect_cmd.run(
@@ -107,6 +135,7 @@ def _dispatch(args, config_path: Path) -> int:
             config_path,
             args.suggest_ports,
             tags=getattr(args, "tag", None) or [],
+            match_all=getattr(args, "match_all", False),
         )
     if args.command == "menu":
         return menu_cmd.main_menu(config_path, args.suggest_ports)
@@ -122,6 +151,10 @@ def _dispatch(args, config_path: Path) -> int:
         return check_cmd.run(config_path, args.suggest_ports)
     if args.command == "test":
         return test_cmd.run(args, config_path)
+    if args.command in ("scp", "sftp", "rsync"):
+        return transfer_cmd.run(args, config_path, args.command)
+    if args.command == "history":
+        return history_cmd.run(args, config_path)
     if args.command == "encrypt":
         return encrypt_cmd.run(args, config_path)
     if args.command == "decrypt":

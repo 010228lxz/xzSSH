@@ -4,19 +4,21 @@ import argparse
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
 import questionary
 
+from xzssh.cli.eventlog import record_event
 from xzssh.cli.helpers import (
     build_ssh_command,
     filter_hosts_by_tags,
     load_config_or_error,
     write_config,
 )
-from xzssh.cli.ui import print_error, print_info
+from xzssh.cli.ui import print_error, print_info, print_warning
 
 
 def run(
@@ -24,6 +26,7 @@ def run(
     config_path: Path,
     suggest_ports: bool,
     tags: Optional[List[str]] = None,
+    match_all: bool = False,
 ) -> int:
     tags = list(tags or [])
     config = load_config_or_error(config_path)
@@ -34,7 +37,7 @@ def run(
     if not alias:
         # Tags only narrow the fuzzy-search candidates; they are ignored when
         # the caller already provided an explicit alias.
-        candidates = filter_hosts_by_tags(config.hosts, tags)
+        candidates = filter_hosts_by_tags(config.hosts, tags, match_all)
         if not candidates:
             if tags:
                 print_error(f"No hosts match tag(s): {', '.join(tags)}")
@@ -86,10 +89,18 @@ def run(
     )
 
     returncode = 0
+    started = time.monotonic()
     try:
         returncode = subprocess.run(ssh_args).returncode
     except KeyboardInterrupt:
         returncode = 130
+    duration = time.monotonic() - started
+
+    # Failed connects are logged too — exit codes are the point of the
+    # history view. Logging is best-effort and must never fail the connect.
+    log_warning = record_event(config, config_path, host, returncode, duration)
+    if log_warning:
+        print_warning(log_warning)
 
     # OpenSSH returns 255 for connection-setup failure. Any other code means
     # we did successfully connect (even if the remote shell exited non-zero).

@@ -19,7 +19,17 @@ def _isolated_profile_registry(
     registry_file = tmp_path_factory.mktemp("profiles") / "profiles.json"
     monkeypatch.setenv("XZSSH_PROFILES_FILE", str(registry_file))
     monkeypatch.delenv("XZSSH_PROFILE", raising=False)
+    monkeypatch.delenv("XZSSH_THEME", raising=False)
     return registry_file
+
+
+@pytest.fixture(autouse=True)
+def _reset_theme():
+    """Themes mutate the module-global consoles; undo after each test."""
+    yield
+    from xzssh.cli import ui
+
+    ui.apply_theme(ui.DEFAULT_THEME)
 
 
 @pytest.fixture(autouse=True)

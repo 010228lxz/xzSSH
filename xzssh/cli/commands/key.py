@@ -20,6 +20,7 @@ from xzssh.cli.ui import (
     status,
 )
 from xzssh.model import Config
+from xzssh.platform import Platform, detect_platform
 from xzssh.validator import validate_config
 
 
@@ -100,9 +101,23 @@ def _add_agent(args: argparse.Namespace, config_path: Path) -> int:
         print_error(f"Key file not found: {key_path}")
         return 1
 
+    keychain = getattr(args, "keychain", False)
+    if keychain and detect_platform() != Platform.MACOS:
+        print_error(
+            "--keychain stores the passphrase in Apple's Keychain and is "
+            "only available on macOS."
+        )
+        return 2
+
+    ssh_add_cmd = ["ssh-add"]
+    if keychain:
+        # Monterey+ spelling; the pre-Monterey -K flag is long deprecated.
+        ssh_add_cmd.append("--apple-use-keychain")
+    ssh_add_cmd.append(str(key_path))
+
     with status(f"Adding '{args.name}' to ssh-agent"):
         result = subprocess.run(
-            ["ssh-add", str(key_path)],
+            ssh_add_cmd,
             capture_output=True,
             text=True,
         )
@@ -111,5 +126,12 @@ def _add_agent(args: argparse.Namespace, config_path: Path) -> int:
     if result.stderr:
         print_error(result.stderr.rstrip())
     if result.returncode == 0:
-        print_success(f"Key '{args.name}' is now managed by the agent.")
+        if keychain:
+            print_success(
+                f"Key '{args.name}' is now managed by the agent; its "
+                "passphrase is stored in the macOS Keychain (subsequent "
+                "loads won't prompt)."
+            )
+        else:
+            print_success(f"Key '{args.name}' is now managed by the agent.")
     return result.returncode

@@ -148,15 +148,22 @@ def resolve_key_path(path_value: str, source_path: Path) -> Path:
     return resolve_path(path_value, source_path.parent)
 
 
-def filter_hosts_by_tags(hosts: List[Host], tags: List[str]) -> List[Host]:
-    """Return hosts that have at least one of the given tags (OR semantics).
+def filter_hosts_by_tags(
+    hosts: List[Host], tags: List[str], match_all: bool = False
+) -> List[Host]:
+    """Filter hosts by tags: OR semantics by default, AND with *match_all*.
 
-    When *tags* is empty every host is returned unchanged, preserving the
-    default "show everything" behaviour.
+    AND-filtering over multiple tags (``--tag prod --tag db
+    --match-all``) is the supported way to express groupings like
+    "prod databases" — there is deliberately no folder hierarchy.
+    When *tags* is empty every host is returned unchanged, preserving
+    the default "show everything" behaviour.
     """
     if not tags:
         return hosts
     tag_set = set(tags)
+    if match_all:
+        return [h for h in hosts if tag_set <= set(h.tags)]
     return [h for h in hosts if tag_set & set(h.tags)]
 
 

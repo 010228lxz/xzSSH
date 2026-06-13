@@ -101,62 +101,51 @@ All Tier 3 items have shipped (v0.11.0 – v0.15.0):
 
 ---
 
-## Tier 4 — Speculative
+## Tier 4 — Resolved ✅
 
-Worth considering, but each has real friction or out-of-scope risk.
+Every Tier 4 item is now either shipped or explicitly declined (the
+declines moved to *Not planned* below). The backlog is empty — new
+items start from a fresh proposal, not this list.
 
-### `xzssh scp` / `xzssh sftp` / `xzssh rsync` wrappers
+- ✅ `xzssh scp` / `xzssh sftp` / `xzssh rsync` wrappers — **v0.18.0**.
+  Alias rewriting (`db:/x` → `user@host:/x`) plus per-host option
+  injection (`-P/-i/-J/-o`, or `-e ssh …` for rsync), so they work even
+  when `~/.ssh/config` was never generated — which is exactly the case
+  where "just run scp" doesn't.
 
-Convenience wrappers that resolve an alias and pass through to the
-real binary. Marginal value over just running `scp host:path .` once
-the user's `~/.ssh/config` is set up.
+- ✅ `xzssh history` view + connection event log — **v0.16.0**.
+  Shipped together, as predicted (history needs the exit codes only a
+  log can provide). Opt-in via `xzssh history enable`; JSONL next to
+  the config file (per-profile); `no-log` host tag respected; `0600`;
+  best-effort writes that never fail a connect.
 
-### `xzssh history` view
+- ✅ macOS Keychain integration — **v0.19.0**. `xzssh key add-agent
+  <name> --keychain` (ssh-add `--apple-use-keychain`). The portability
+  concern is handled by failing fast: the flag is a clean error (exit
+  2) off macOS rather than a silent no-op.
 
-`Host.last_used` exists; we already sort by it. A dedicated
-`xzssh history` showing chronological recent connections (last 50,
-with timestamps and exit codes) would be nice if we also log exit
-codes — currently we don't.
+- ✅ Groups / folders — resolved **in the direction this item itself
+  recommended**: no hierarchy. v0.19.0 adds `--match-all` to `list`
+  and `connect`, so `--tag prod --tag db --match-all` expresses
+  "prod databases" with AND semantics. Folder paths stay declined.
 
-### Connection event log
-
-Opt-in `~/.ssh/xzssh.log` with timestamped connect events. Pairs with
-the history view. Privacy-sensitive — must be opt-in and respect a
-"no-log" host tag.
-
-### macOS Keychain integration
-
-`xzssh key add-agent` could store the passphrase in Keychain so
-subsequent loads don't prompt. macOS-only feature; nice but limits
-portability of the feature flag.
-
-### Groups / folders
-
-For users with 50+ hosts, hierarchical grouping (`prod/db/primary`,
-`prod/db/replica`). Probably better served by tags + multi-tag
-filtering than by a real hierarchy.
-
-### Themes
-
-`rich` makes per-theme styling easy. The current neon-green/cyan/pink
-palette is opinionated; a `--theme classic` and `--theme high-contrast`
-would help users who want something more sober.
-
-### TUI dashboard (vs. menu loops)
-
-A full-screen `textual` UI replacing the questionary-based menus. Big
-dep, big rewrite of `xzssh/cli/commands/menu.py`. Probably overkill
-unless we have a real reason.
-
-### Web/desktop GUI
-
-Out of scope for a CLI tool. Don't.
+- ✅ Themes — **v0.17.0**. `classic` and `high-contrast` as sketched,
+  plus `mono` (emphasis-only, for monochrome terminals). `--theme` /
+  `$XZSSH_THEME` / `xzssh theme <name>` (saved in the profiles
+  registry). All styling flows through semantic names in `ui.py`.
 
 ---
 
 ## Not planned
 
 Explicit no's so they don't get re-proposed:
+
+- **TUI dashboard (`textual`).** Declined after the Tier 4 review
+  (2026-06): a big dependency and a rewrite of the menu loops, against
+  the project's small-dep-tree principle (`rich` + `questionary`
+  only), with no concrete user need the menus + themes don't already
+  cover. Revisit only with a real reason, per the original note.
+- **Web/desktop GUI.** Out of scope for a CLI tool. Don't.
 
 - **`paramiko` integration for an in-process SSH client.** xzSSH is a
   config manager, not an SSH client replacement. Always shell out to
