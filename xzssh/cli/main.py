@@ -127,6 +127,7 @@ def _dispatch(args, config_path: Path) -> int:
             config_path,
             args.suggest_ports,
             tags=getattr(args, "tag", None) or [],
+            match_all=getattr(args, "match_all", False),
         )
     if args.command == "connect":
         return connect_cmd.run(
@@ -134,6 +135,7 @@ def _dispatch(args, config_path: Path) -> int:
             config_path,
             args.suggest_ports,
             tags=getattr(args, "tag", None) or [],
+            match_all=getattr(args, "match_all", False),
         )
     if args.command == "menu":
         return menu_cmd.main_menu(config_path, args.suggest_ports)

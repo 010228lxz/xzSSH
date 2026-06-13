@@ -101,9 +101,11 @@ All Tier 3 items have shipped (v0.11.0 – v0.15.0):
 
 ---
 
-## Tier 4 — Speculative
+## Tier 4 — Resolved ✅
 
-Worth considering, but each has real friction or out-of-scope risk.
+Every Tier 4 item is now either shipped or explicitly declined (the
+declines moved to *Not planned* below). The backlog is empty — new
+items start from a fresh proposal, not this list.
 
 - ✅ `xzssh scp` / `xzssh sftp` / `xzssh rsync` wrappers — **v0.18.0**.
   Alias rewriting (`db:/x` → `user@host:/x`) plus per-host option
@@ -117,38 +119,33 @@ Worth considering, but each has real friction or out-of-scope risk.
   the config file (per-profile); `no-log` host tag respected; `0600`;
   best-effort writes that never fail a connect.
 
-### macOS Keychain integration
+- ✅ macOS Keychain integration — **v0.19.0**. `xzssh key add-agent
+  <name> --keychain` (ssh-add `--apple-use-keychain`). The portability
+  concern is handled by failing fast: the flag is a clean error (exit
+  2) off macOS rather than a silent no-op.
 
-`xzssh key add-agent` could store the passphrase in Keychain so
-subsequent loads don't prompt. macOS-only feature; nice but limits
-portability of the feature flag.
-
-### Groups / folders
-
-For users with 50+ hosts, hierarchical grouping (`prod/db/primary`,
-`prod/db/replica`). Probably better served by tags + multi-tag
-filtering than by a real hierarchy.
+- ✅ Groups / folders — resolved **in the direction this item itself
+  recommended**: no hierarchy. v0.19.0 adds `--match-all` to `list`
+  and `connect`, so `--tag prod --tag db --match-all` expresses
+  "prod databases" with AND semantics. Folder paths stay declined.
 
 - ✅ Themes — **v0.17.0**. `classic` and `high-contrast` as sketched,
   plus `mono` (emphasis-only, for monochrome terminals). `--theme` /
   `$XZSSH_THEME` / `xzssh theme <name>` (saved in the profiles
   registry). All styling flows through semantic names in `ui.py`.
 
-### TUI dashboard (vs. menu loops)
-
-A full-screen `textual` UI replacing the questionary-based menus. Big
-dep, big rewrite of `xzssh/cli/commands/menu.py`. Probably overkill
-unless we have a real reason.
-
-### Web/desktop GUI
-
-Out of scope for a CLI tool. Don't.
-
 ---
 
 ## Not planned
 
 Explicit no's so they don't get re-proposed:
+
+- **TUI dashboard (`textual`).** Declined after the Tier 4 review
+  (2026-06): a big dependency and a rewrite of the menu loops, against
+  the project's small-dep-tree principle (`rich` + `questionary`
+  only), with no concrete user need the menus + themes don't already
+  cover. Revisit only with a real reason, per the original note.
+- **Web/desktop GUI.** Out of scope for a CLI tool. Don't.
 
 - **`paramiko` integration for an in-process SSH client.** xzSSH is a
   config manager, not an SSH client replacement. Always shell out to

@@ -83,6 +83,11 @@ def build_parser() -> argparse.ArgumentParser:
             " any of the given tags)"
         ),
     )
+    list_parser.add_argument(
+        "--match-all",
+        action="store_true",
+        help="Require ALL given --tag values instead of any (AND semantics)",
+    )
 
     connect_parser = subparsers.add_parser(
         "connect", parents=[parent], help="Connect to a host"
@@ -100,6 +105,11 @@ def build_parser() -> argparse.ArgumentParser:
             "Restrict fuzzy-search choices to hosts with this tag (repeatable;"
             " OR semantics; has no effect when <alias> is given explicitly)"
         ),
+    )
+    connect_parser.add_argument(
+        "--match-all",
+        action="store_true",
+        help="Require ALL given --tag values instead of any (AND semantics)",
     )
     connect_parser.add_argument(
         "--dry-run",
@@ -520,5 +530,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     key_add_agent_name = key_add_agent.add_argument("name")
     key_add_agent_name.completer = key_completer  # type: ignore[attr-defined]
+    key_add_agent.add_argument(
+        "--keychain",
+        action="store_true",
+        help="macOS only: store the passphrase in the Keychain "
+        "(ssh-add --apple-use-keychain), so later loads don't prompt",
+    )
 
     return parser

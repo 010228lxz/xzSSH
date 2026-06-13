@@ -30,6 +30,7 @@ def run(
     suggest_ports: bool,
     interactive: bool = False,
     tags: Optional[List[str]] = None,
+    match_all: bool = False,
 ) -> int:
     tags = list(tags or [])
     while True:
@@ -55,7 +56,7 @@ def run(
         if result.warnings:
             print_warnings(result.warnings)
 
-        displayed_hosts = filter_hosts_by_tags(config.hosts, tags)
+        displayed_hosts = filter_hosts_by_tags(config.hosts, tags, match_all)
 
         if tags:
             tag_str = ", ".join(tags)

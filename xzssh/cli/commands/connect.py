@@ -26,6 +26,7 @@ def run(
     config_path: Path,
     suggest_ports: bool,
     tags: Optional[List[str]] = None,
+    match_all: bool = False,
 ) -> int:
     tags = list(tags or [])
     config = load_config_or_error(config_path)
@@ -36,7 +37,7 @@ def run(
     if not alias:
         # Tags only narrow the fuzzy-search candidates; they are ignored when
         # the caller already provided an explicit alias.
-        candidates = filter_hosts_by_tags(config.hosts, tags)
+        candidates = filter_hosts_by_tags(config.hosts, tags, match_all)
         if not candidates:
             if tags:
                 print_error(f"No hosts match tag(s): {', '.join(tags)}")
