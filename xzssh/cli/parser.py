@@ -537,4 +537,71 @@ def build_parser() -> argparse.ArgumentParser:
         "(ssh-add --apple-use-keychain), so later loads don't prompt",
     )
 
+    key_gen = key_subparsers.add_parser(
+        "gen",
+        parents=[parent],
+        help="Generate a new keypair with ssh-keygen and register it",
+    )
+    key_gen.add_argument("name", help="Key name to register (e.g. work)")
+    key_gen.add_argument(
+        "path",
+        nargs="?",
+        help="Private key file to create (default: ~/.ssh/<name>)",
+    )
+    key_gen.add_argument(
+        "--type", "-t",
+        choices=["ed25519", "rsa", "ecdsa"],
+        default="ed25519",
+        help="Key type (default: ed25519)",
+    )
+    key_gen.add_argument(
+        "--bits", "-b",
+        type=int,
+        metavar="N",
+        help="Key size in bits (rsa/ecdsa only; rsa defaults to 4096)",
+    )
+    key_gen.add_argument(
+        "--comment", "-C",
+        metavar="TEXT",
+        help="Key comment (default: ssh-keygen's user@host)",
+    )
+    key_gen.add_argument(
+        "--no-passphrase",
+        action="store_true",
+        help="Create the key with an empty passphrase (-N ''); otherwise "
+        "ssh-keygen prompts for one",
+    )
+    key_gen.add_argument(
+        "--no-register",
+        action="store_true",
+        help="Generate the key file only; don't add a reference to the config",
+    )
+    key_gen.add_argument(
+        "--replace",
+        action="store_true",
+        help="Overwrite an existing key file and/or registered name",
+    )
+
+    key_copy_id = key_subparsers.add_parser(
+        "copy-id",
+        parents=[parent],
+        help="Install a public key on a host with ssh-copy-id",
+    )
+    key_copy_id_alias = key_copy_id.add_argument(
+        "alias", help="Alias of the host to install the key on"
+    )
+    key_copy_id_alias.completer = alias_completer  # type: ignore[attr-defined]
+    key_copy_id_key = key_copy_id.add_argument(
+        "--key",
+        metavar="NAME",
+        help="Registered key to install (default: the host's identity_file, "
+        "or your agent/default identities)",
+    )
+    key_copy_id_key.completer = key_completer  # type: ignore[attr-defined]
+    key_copy_id.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the resolved ssh-copy-id command without running it",
+    )
+
     return parser

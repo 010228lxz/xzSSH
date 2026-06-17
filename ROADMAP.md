@@ -136,6 +136,47 @@ items start from a fresh proposal, not this list.
 
 ---
 
+## Post-roadmap proposals
+
+A fresh review (2026-06) opened a new line of work beyond the closed
+Tier 1–4 backlog. Ordered by leverage; these are proposals, not
+commitments.
+
+- ✅ **Key lifecycle completion — v0.20.0.** `key gen` (ssh-keygen
+  wrapper, ed25519 default, auto-register) + `key copy-id` (ssh-copy-id,
+  reusing the host's user/port/ProxyJump). A brand-new host can now be
+  stood up end-to-end without leaving xzSSH.
+
+- ☐ **Free-form `options: Dict[str, str]` passthrough on `Host`** (M).
+  Ends the per-field treadmill (each SSH directive currently touches
+  model/parser/validator/generator/`build_ssh_command`); unblocks
+  ControlMaster, SetEnv, RemoteCommand, ciphers, etc. in one change.
+  Render verbatim after the typed fields; validate keys lightly.
+
+- ☐ **Connection multiplexing** — `ControlMaster`/`ControlPath`/
+  `ControlPersist` (M). Highest daily-use SSH feature still missing;
+  pairs with `tunnel`. Could ride on the options passthrough.
+
+- ☐ **`known-hosts remove <alias>`** (S) — wrap `ssh-keygen -R
+  host[:port]` (honouring the host's `UserKnownHostsFile`) for the
+  "host key changed" wall after a server rebuild.
+
+- ☐ **Wildcard / default `Host *` block** (L) — the biggest
+  import-fidelity gap; the importer already warns it can't model it.
+  Risky: precedence semantics + `sync/diff` interaction.
+
+- ☐ **Smaller polish** (each S): `history stats` (data is already
+  logged), `add --from <alias>` (clone a host as a template),
+  `completion install` (write the shell activation snippet), a `mosh`
+  wrapper, and `tag add/rm <alias>` (retag without an `edit` round-trip).
+
+Two correctness items also surfaced in the review: the validator checks
+LocalForward port conflicts but ignores RemoteForward/DynamicForward,
+and `tunnel start` doesn't pre-check that the local port is free before
+spawning `ssh -N`.
+
+---
+
 ## Not planned
 
 Explicit no's so they don't get re-proposed:

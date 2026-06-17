@@ -198,6 +198,34 @@ def build_ssh_command(
     return args
 
 
+def build_ssh_copy_id_command(
+    host: Host, identity_file: Optional[str] = None
+) -> List[str]:
+    """Build the ``ssh-copy-id`` argv for installing a public key on *host*.
+
+    Mirrors :func:`build_ssh_command` so port, user, ProxyJump and the
+    scalar ssh options are honoured. Unlike ``ssh``, ssh-copy-id has no
+    ``-J`` flag, so ProxyJump is passed through as ``-o ProxyJump=…`` like
+    the other scalar options. ``identity_file`` is the key whose ``.pub``
+    is copied (ssh-copy-id appends ``.pub`` itself); ``None`` lets
+    ssh-copy-id fall back to the agent/default identities.
+    """
+    args: List[str] = ["ssh-copy-id"]
+    if identity_file:
+        args.extend(["-i", identity_file])
+    if host.port:
+        args.extend(["-p", str(host.port)])
+    if host.proxy_jump:
+        args.extend(["-o", f"ProxyJump={host.proxy_jump}"])
+    for key, value in _scalar_ssh_options(host):
+        args.extend(["-o", f"{key}={value}"])
+    target = host.host_name
+    if host.user:
+        target = f"{host.user}@{target}"
+    args.append(target)
+    return args
+
+
 def _scalar_ssh_options(host: Host):
     """Yield (ssh_option, value) pairs for the host's scalar SSH settings."""
     if host.forward_agent is not None:
