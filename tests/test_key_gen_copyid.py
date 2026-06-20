@@ -190,7 +190,10 @@ def test_copy_id_dry_run_uses_identity_file(config_path, tmp_path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "ssh-copy-id" in out
-    assert f"-i {key_file}" in out
+    # The path may be shell-quoted (shlex quotes Windows backslash paths),
+    # so check the flag and the path independently rather than adjacency.
+    assert "-i" in out
+    assert str(key_file) in out
     assert "-p 2222" in out
     assert "alice@db.example.com" in out
 
@@ -207,7 +210,9 @@ def test_copy_id_with_named_key(config_path, tmp_path, capsys):
     ])
 
     assert rc == 0
-    assert f"-i {key_file}" in capsys.readouterr().out
+    out = capsys.readouterr().out
+    assert "-i" in out
+    assert str(key_file) in out
 
 
 def test_copy_id_runs_ssh_copy_id(config_path, tmp_path, monkeypatch):
