@@ -27,6 +27,7 @@ whose pid we can't learn, which would make ``tunnel stop`` impossible.
 from __future__ import annotations
 
 import argparse
+import socket
 import subprocess
 import sys
 import time
@@ -84,6 +85,40 @@ def _forward_descriptions(host: Host) -> List[str]:
     return described
 
 
+def _port_in_use(port: int) -> bool:
+    """True if *port* can't be bound on loopback right now.
+
+    ssh binds LocalForward/DynamicForward ports on the local side (loopback
+    by default), so a pre-flight bind here catches a port that's already
+    taken — by another process or a tunnel we started earlier — before we
+    spawn ssh, giving a clear message instead of a terse bind error in a
+    detached log. Best-effort: a port held only on a non-loopback
+    interface won't be flagged (ssh would bind loopback fine anyway).
+    """
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+        try:
+            sock.bind(("127.0.0.1", port))
+        except OSError:
+            return True
+    return False
+
+
+def _busy_local_ports(host: Host) -> List[int]:
+    """Local-bind ports for *host* that are already taken, in order.
+
+    Only client-side binds matter: LocalForward.local_port and
+    DynamicForward. RemoteForward binds on the server, so it's not checked
+    here. Duplicates are reported once.
+    """
+    ports: List[int] = [lf.local_port for lf in host.local_forwards]
+    ports += list(host.dynamic_forwards)
+    busy: List[int] = []
+    for port in ports:
+        if port not in busy and _port_in_use(port):
+            busy.append(port)
+    return busy
+
+
 def build_tunnel_command(host: Host) -> List[str]:
     """The ``ssh -N`` argv for *host*'s forwards.
 
@@ -119,6 +154,19 @@ def _start(args: argparse.Namespace, config_path: Path) -> int:
             f"dynamic_forwards first (e.g. `xzssh edit {host.alias}`)."
         )
         return 2
+
+    # Fail fast on a local port that's already taken: ssh would refuse to
+    # bind (ExitOnForwardFailure=yes) anyway, but a named-port message here
+    # beats a terse bind error buried in a detached tunnel's log.
+    busy = _busy_local_ports(host)
+    if busy:
+        ports_str = ", ".join(str(p) for p in busy)
+        print_error(
+            f"Local port(s) already in use: {ports_str}. Free them or stop "
+            f"the conflicting tunnel (`xzssh tunnel list`) before starting "
+            f"the tunnel to '{host.alias}'."
+        )
+        return 1
 
     ssh_args = build_tunnel_command(host)
 

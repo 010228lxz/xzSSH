@@ -170,10 +170,11 @@ commitments.
   `completion install` (write the shell activation snippet), a `mosh`
   wrapper, and `tag add/rm <alias>` (retag without an `edit` round-trip).
 
-Two correctness items also surfaced in the review: the validator checks
-LocalForward port conflicts but ignores RemoteForward/DynamicForward,
-and `tunnel start` doesn't pre-check that the local port is free before
-spawning `ssh -N`.
+Two correctness items also surfaced in the review and were **fixed in
+v0.20.1**: the validator compares DynamicForward (with
+LocalForward, as client-side local binds) and RemoteForward (per
+`host_name`, as server-side binds) port conflicts, and `tunnel start`
+pre-checks that each local-bind port is free before spawning `ssh -N`.
 
 ---
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Tuple
 
 from xzssh.model import Config, Host, LocalForward
 from xzssh.platform import check_private_key_permissions, resolve_path
@@ -38,8 +38,14 @@ def validate_config(
         )
 
     seen_aliases: Set[str] = set()
-    local_port_map: Dict[int, List[str]] = {}
+    # Client-side binds (LocalForward.local_port + DynamicForward) share one
+    # local-port namespace, so they are checked together across every host.
+    # Each entry is (host_label, forward_kind) for an accurate message.
+    local_bind_map: Dict[int, List[Tuple[str, str]]] = {}
     used_ports: Set[int] = set()
+    # RemoteForward binds on the *server*, so a port collision is only real
+    # among forwards landing on the same host_name — keyed accordingly.
+    remote_bind_map: Dict[Tuple[str, int], List[str]] = {}
 
     for idx, host in enumerate(config.hosts):
         _validate_host(
@@ -47,8 +53,9 @@ def validate_config(
             idx,
             result,
             seen_aliases,
-            local_port_map,
+            local_bind_map,
             used_ports,
+            remote_bind_map,
         )
 
     # ProxyJump references can only be resolved after every host has been
@@ -57,12 +64,13 @@ def validate_config(
 
     _validate_keys(config.keys, result, source_path)
 
-    _validate_local_port_conflicts(
-        local_port_map,
+    _validate_local_bind_conflicts(
+        local_bind_map,
         used_ports,
         result,
         suggest_ports=suggest_ports,
     )
+    _validate_remote_bind_conflicts(remote_bind_map, result)
 
     return result
 
@@ -72,8 +80,9 @@ def _validate_host(
     idx: int,
     result: ValidationResult,
     seen_aliases: Set[str],
-    local_port_map: Dict[int, List[str]],
+    local_bind_map: Dict[int, List[Tuple[str, str]]],
     used_ports: Set[int],
+    remote_bind_map: Dict[Tuple[str, int], List[str]],
 ) -> None:
     alias = host.alias
     if not isinstance(alias, str) or not alias.strip():
@@ -127,7 +136,7 @@ def _validate_host(
             lf_idx,
             host_label,
             result,
-            local_port_map,
+            local_bind_map,
             used_ports,
         )
 
@@ -150,6 +159,14 @@ def _validate_host(
                 f"hosts[{idx}].remote_forwards[{rf_idx}].local_host "
                 "must be a non-empty string"
             )
+        # The bind is on the remote server, so collisions are tracked
+        # per host_name, not across the whole config.
+        if isinstance(remote_forward.remote_port, int) and isinstance(
+            host.host_name, str
+        ) and host.host_name.strip():
+            remote_bind_map.setdefault(
+                (host.host_name, remote_forward.remote_port), []
+            ).append(host_label)
 
     for df_idx, dynamic_port in enumerate(host.dynamic_forwards):
         _validate_port(
@@ -157,6 +174,17 @@ def _validate_host(
             f"hosts[{idx}].dynamic_forwards[{df_idx}]",
             result.errors,
         )
+        if isinstance(dynamic_port, int):
+            if dynamic_port < 1024:
+                result.warnings.append(
+                    "DynamicForward port below 1024: "
+                    f"{dynamic_port} on host {host_label}. "
+                    "Binding may require elevated privileges."
+                )
+            local_bind_map.setdefault(dynamic_port, []).append(
+                (host_label, "DynamicForward")
+            )
+            used_ports.add(dynamic_port)
 
 
 def _validate_local_forward(
@@ -165,7 +193,7 @@ def _validate_local_forward(
     lf_idx: int,
     host_label: str,
     result: ValidationResult,
-    local_port_map: Dict[int, List[str]],
+    local_bind_map: Dict[int, List[Tuple[str, str]]],
     used_ports: Set[int],
 ) -> None:
     _validate_port(
@@ -191,7 +219,9 @@ def _validate_local_forward(
                 f"{local_forward.local_port} on host {host_label}. "
                 "Binding may require elevated privileges."
             )
-        local_port_map.setdefault(local_forward.local_port, []).append(host_label)
+        local_bind_map.setdefault(local_forward.local_port, []).append(
+            (host_label, "LocalForward")
+        )
         used_ports.add(local_forward.local_port)
 
 
@@ -225,19 +255,25 @@ def _validate_proxy_jump_references(
             )
 
 
-def _validate_local_port_conflicts(
-    local_port_map: Dict[int, List[str]],
+def _validate_local_bind_conflicts(
+    local_bind_map: Dict[int, List[Tuple[str, str]]],
     used_ports: Set[int],
     result: ValidationResult,
     suggest_ports: bool,
 ) -> None:
-    for port, hosts in sorted(local_port_map.items()):
-        if len(hosts) <= 1:
+    for port, entries in sorted(local_bind_map.items()):
+        if len(entries) <= 1:
             continue
-        host_list = ", ".join(hosts)
-        message = (
-            f"Duplicate LocalForward port {port} across hosts: {host_list}."
-        )
+        kinds = {kind for _, kind in entries}
+        # Keep the original wording when only LocalForwards collide; spell
+        # out the forward kinds once a DynamicForward enters the mix (both
+        # contend for the same local port).
+        if kinds == {"LocalForward"}:
+            who = ", ".join(label for label, _ in entries)
+            message = f"Duplicate LocalForward port {port} across hosts: {who}."
+        else:
+            who = ", ".join(f"{label} [{kind}]" for label, kind in entries)
+            message = f"Duplicate local bind port {port} across forwards: {who}."
         if suggest_ports:
             suggestion = _suggest_next_free_port(used_ports, port)
             if suggestion is not None:
@@ -245,6 +281,20 @@ def _validate_local_port_conflicts(
             else:
                 message += " Suggestion: no free port available above this value."
         result.errors.append(message)
+
+
+def _validate_remote_bind_conflicts(
+    remote_bind_map: Dict[Tuple[str, int], List[str]],
+    result: ValidationResult,
+) -> None:
+    for (host_name, port), labels in sorted(remote_bind_map.items()):
+        if len(labels) <= 1:
+            continue
+        who = ", ".join(labels)
+        result.errors.append(
+            f"Duplicate RemoteForward remote port {port} on server "
+            f"'{host_name}' across hosts: {who}."
+        )
 
 
 def _suggest_next_free_port(used_ports: Set[int], start_port: int) -> Optional[int]:

@@ -2,7 +2,7 @@ import os
 
 import pytest
 
-from xzssh.model import Config, Host, LocalForward
+from xzssh.model import Config, Host, LocalForward, RemoteForward
 from xzssh.validator import validate_config
 
 
@@ -41,6 +41,87 @@ def test_duplicate_local_forward_port_detection() -> None:
     assert any("db (db)" in error for error in result.errors)
     assert any("cache (cache)" in error for error in result.errors)
     assert any("Suggestion: next free port" in error for error in result.errors)
+
+
+def test_duplicate_dynamic_forward_port_detection() -> None:
+    config = Config(
+        version=1,
+        hosts=[
+            Host(alias="a", host_name="a", dynamic_forwards=[1080]),
+            Host(alias="b", host_name="b", dynamic_forwards=[1080]),
+        ],
+    )
+
+    result = validate_config(config)
+    assert any("1080" in error for error in result.errors)
+    assert any("DynamicForward" in error for error in result.errors)
+    assert any("a (a)" in error and "b (b)" in error for error in result.errors)
+
+
+def test_dynamic_and_local_forward_share_local_namespace() -> None:
+    # A DynamicForward and a LocalForward fighting over the same local port
+    # is a real conflict even though they're different forward kinds.
+    config = Config(
+        version=1,
+        hosts=[
+            Host(
+                alias="a",
+                host_name="a",
+                local_forwards=[LocalForward(1080, "127.0.0.1", 5432)],
+            ),
+            Host(alias="b", host_name="b", dynamic_forwards=[1080]),
+        ],
+    )
+
+    result = validate_config(config)
+    assert any("Duplicate local bind port 1080" in error for error in result.errors)
+
+
+def test_duplicate_remote_forward_port_same_server() -> None:
+    # Two hosts pointing at the SAME server collide on the remote port.
+    config = Config(
+        version=1,
+        hosts=[
+            Host(
+                alias="a",
+                host_name="server.example.com",
+                remote_forwards=[RemoteForward(9000, "127.0.0.1", 3000)],
+            ),
+            Host(
+                alias="b",
+                host_name="server.example.com",
+                remote_forwards=[RemoteForward(9000, "127.0.0.1", 4000)],
+            ),
+        ],
+    )
+
+    result = validate_config(config)
+    assert any(
+        "Duplicate RemoteForward remote port 9000" in error
+        for error in result.errors
+    )
+
+
+def test_remote_forward_same_port_different_servers_is_ok() -> None:
+    # Different servers binding the same remote port is fine — no conflict.
+    config = Config(
+        version=1,
+        hosts=[
+            Host(
+                alias="a",
+                host_name="host-a",
+                remote_forwards=[RemoteForward(9000, "127.0.0.1", 3000)],
+            ),
+            Host(
+                alias="b",
+                host_name="host-b",
+                remote_forwards=[RemoteForward(9000, "127.0.0.1", 3000)],
+            ),
+        ],
+    )
+
+    result = validate_config(config)
+    assert not any("RemoteForward" in error for error in result.errors)
 
 
 def test_port_range_validation() -> None:

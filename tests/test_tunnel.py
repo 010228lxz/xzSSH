@@ -18,6 +18,10 @@ from xzssh.cli.main import main
 from xzssh.cli.tunnels import TunnelRecord, load_state, save_state, state_path
 from xzssh.model import Host, LocalForward, RemoteForward
 
+# Captured before the autouse fixture stubs the module attribute, so the
+# unit test below can exercise the genuine implementation.
+_REAL_BUSY_LOCAL_PORTS = tunnel_cmd._busy_local_ports
+
 
 def _seed_forward_host(config_path: Path) -> None:
     main(
@@ -35,6 +39,14 @@ def _seed_plain_host(config_path: Path) -> None:
         ["add", "--config", str(config_path),
          "--alias", "plain", "--host-name", "plain.example.com"]
     )
+
+
+@pytest.fixture(autouse=True)
+def _ports_free(monkeypatch):
+    """The local-port pre-check passes by default so spawn tests are
+    deterministic regardless of what's bound on the host running them; the
+    pre-check tests override this seam explicitly."""
+    monkeypatch.setattr(tunnel_cmd, "_busy_local_ports", lambda host: [])
 
 
 # ---------------------------------------------------------------------------
@@ -332,3 +344,80 @@ def test_state_roundtrip() -> None:
     data = json.loads(state_path().read_text(encoding="utf-8"))
     assert data["tunnels"][0]["alias"] == "db"
     assert load_state(state_path()) == records
+
+
+# ---------------------------------------------------------------------------
+# local-port pre-check
+# ---------------------------------------------------------------------------
+
+def test_start_aborts_when_local_port_in_use(tmp_path: Path, monkeypatch) -> None:
+    config_path = tmp_path / "xzssh.json"
+    _seed_forward_host(config_path)
+
+    # Pretend 8080 (the host's local_forward port) is taken.
+    monkeypatch.setattr(tunnel_cmd, "_busy_local_ports", lambda host: [8080])
+
+    def boom(*args, **kwargs):
+        raise AssertionError("ssh must not be spawned when a port is busy")
+
+    monkeypatch.setattr(tunnel_cmd.subprocess, "run", boom)
+    monkeypatch.setattr(tunnel_cmd.subprocess, "Popen", boom)
+
+    rc = main(["tunnel", "start", "db", "--config", str(config_path)])
+    assert rc == 1
+
+
+def test_start_detached_aborts_when_local_port_in_use(
+    tmp_path: Path, monkeypatch
+) -> None:
+    config_path = tmp_path / "xzssh.json"
+    _seed_forward_host(config_path)
+    monkeypatch.setattr(tunnel_cmd, "_busy_local_ports", lambda host: [1080])
+
+    def boom(*args, **kwargs):
+        raise AssertionError("ssh must not be spawned when a port is busy")
+
+    monkeypatch.setattr(tunnel_cmd.subprocess, "Popen", boom)
+
+    rc = main(["tunnel", "start", "db", "--detach", "--config", str(config_path)])
+    assert rc == 1
+    # No tunnel should have been recorded.
+    assert load_state(state_path()) == []
+
+
+def test_port_in_use_detects_a_bound_socket() -> None:
+    import socket
+
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as srv:
+        srv.bind(("127.0.0.1", 0))  # OS picks a free port
+        srv.listen(1)
+        bound_port = srv.getsockname()[1]
+        # The real function (not the autouse stub) sees the live bind.
+        assert tunnel_cmd._port_in_use(bound_port) is True
+
+    # Once released, a fresh ephemeral port is free again.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        free_port = probe.getsockname()[1]
+    assert tunnel_cmd._port_in_use(free_port) is False
+
+
+def test_busy_local_ports_skips_remote_forwards(monkeypatch) -> None:
+    # Only LocalForward + DynamicForward are loopback binds; RemoteForward
+    # binds on the server and must not be probed locally.
+    host = Host(
+        alias="db",
+        host_name="db",
+        local_forwards=[LocalForward(8080, "localhost", 80)],
+        remote_forwards=[RemoteForward(9090, "localhost", 3000)],
+        dynamic_forwards=[1080],
+    )
+    probed: list = []
+
+    def fake_in_use(port: int) -> bool:
+        probed.append(port)
+        return False
+
+    monkeypatch.setattr(tunnel_cmd, "_port_in_use", fake_in_use)
+    assert _REAL_BUSY_LOCAL_PORTS(host) == []
+    assert probed == [8080, 1080]  # 9090 (remote) is not probed
