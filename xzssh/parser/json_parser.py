@@ -216,6 +216,25 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
         for df_idx, v in enumerate(dynamic_forwards_value)
     ]
 
+    options_value = data.get("options", {})
+    if options_value is None:
+        options_value = {}
+    if not isinstance(options_value, dict):
+        raise ConfigParseError(
+            f"hosts[{idx}].options must be an object if provided"
+        )
+    options: Dict[str, str] = {}
+    for opt_key, opt_val in options_value.items():
+        if not isinstance(opt_key, str) or not opt_key.strip():
+            raise ConfigParseError(
+                f"hosts[{idx}].options keys must be non-empty strings"
+            )
+        if opt_val is None:
+            raise ConfigParseError(
+                f"hosts[{idx}].options['{opt_key}'] cannot be null"
+            )
+        options[opt_key] = str(opt_val)
+
     return Host(
         alias=alias,
         host_name=host_name,
@@ -234,6 +253,7 @@ def _parse_host(data: Dict[str, Any], idx: int) -> Host:
         dynamic_forwards=dynamic_forwards,
         tags=tags,
         last_used=last_used,
+        options=options,
     )
 
 

@@ -53,6 +53,11 @@ def render_openssh(config: Config, source_path: Path) -> str:
             )
         for dynamic_port in host.dynamic_forwards:
             lines.append(f"  DynamicForward {dynamic_port}")
+        # Free-form passthrough, rendered last so a directive xzSSH also
+        # manages from a typed field keeps the typed value (ssh uses the
+        # first occurrence).
+        for opt_key, opt_value in host.options.items():
+            lines.append(f"  {opt_key} {opt_value}")
 
     return "\n".join(lines) + "\n"
 

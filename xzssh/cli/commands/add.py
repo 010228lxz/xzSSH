@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 from xzssh.cli.helpers import (
     load_config_if_exists,
     parse_local_forward_arg,
+    parse_option_arg,
     parse_remote_forward_arg,
     write_config,
 )
@@ -57,6 +58,15 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
             print_error(str(exc))
             return 2
 
+    options: Dict[str, str] = {}
+    for raw in getattr(args, "option", []) or []:
+        try:
+            opt_key, opt_value = parse_option_arg(raw)
+        except ValueError as exc:
+            print_error(str(exc))
+            return 2
+        options[opt_key] = opt_value
+
     new_host = Host(
         alias=args.alias,
         host_name=args.host_name,
@@ -74,6 +84,7 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         remote_forwards=remote_forwards,
         dynamic_forwards=list(getattr(args, "dynamic_forward", []) or []),
         tags=args.tag,
+        options=options,
     )
 
     replaced = False

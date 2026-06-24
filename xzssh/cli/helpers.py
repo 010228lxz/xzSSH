@@ -4,7 +4,7 @@ import json
 import os
 import shutil
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from xzssh.cli.ui import print_error, print_notice, print_warning
 from xzssh.crypto import encrypt
@@ -108,6 +108,25 @@ def parse_remote_forward_arg(raw: str) -> RemoteForward:
     )
 
 
+def parse_option_arg(raw: str) -> Tuple[str, str]:
+    """Parse a ``--option KEY=VALUE`` argument into a (key, value) pair.
+
+    Splits on the first ``=`` only, so values may themselves contain
+    ``=`` (e.g. ``SetEnv=FOO=bar``). The key is trimmed; the value is
+    kept verbatim since it's an ssh_config directive value.
+    """
+    if "=" not in raw:
+        raise ValueError(
+            "Invalid --option value. Expected KEY=VALUE "
+            "(e.g. ControlMaster=auto)"
+        )
+    key, value = raw.split("=", 1)
+    key = key.strip()
+    if not key:
+        raise ValueError("Invalid --option value. KEY must be non-empty")
+    return key, value
+
+
 def write_config(config_path: Path, config: Config) -> None:
     """Persist a Config atomically with restrictive permissions.
 
@@ -188,6 +207,10 @@ def build_ssh_command(
     # NOT injected here — they belong in the generated config, not in an
     # interactive connect/which/test command line.
     for key, value in _scalar_ssh_options(host):
+        args.extend(["-o", f"{key}={value}"])
+    # Free-form options too, after the scalars so a managed directive (a
+    # typed field) wins — ssh takes the first `-o` value for a key.
+    for key, value in host.options.items():
         args.extend(["-o", f"{key}={value}"])
     if extra_options:
         args.extend(extra_options)

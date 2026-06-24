@@ -6,7 +6,7 @@ __all__ = ["__version__"]
 # Fallback for environments where package metadata is unavailable — notably
 # the Nuitka onefile release binaries. Must match pyproject.toml's version;
 # tests/test_version.py and scripts/check_version.py enforce that.
-_FALLBACK_VERSION = "0.20.1"
+_FALLBACK_VERSION = "0.21.0"
 
 try:
     __version__ = _dist_version("xzssh")

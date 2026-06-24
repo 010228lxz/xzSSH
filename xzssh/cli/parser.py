@@ -198,6 +198,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Path for UserKnownHostsFile",
     )
     add_parser.add_argument(
+        "--option",
+        action="append",
+        default=[],
+        dest="option",
+        metavar="KEY=VALUE",
+        help="Extra ssh_config directive, written verbatim (repeatable), "
+        "for anything xzSSH has no dedicated flag for "
+        "(e.g. --option ControlMaster=auto --option 'SetEnv=FOO=bar')",
+    )
+    add_parser.add_argument(
         "--replace",
         action="store_true",
         help="Replace existing host with the same alias",

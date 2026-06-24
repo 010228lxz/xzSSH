@@ -61,6 +61,12 @@ class Host:
     dynamic_forwards: List[int] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
     last_used: Optional[str] = None
+    # Escape hatch: free-form ssh_config directives rendered verbatim
+    # after the typed fields (e.g. {"ControlMaster": "auto"}). Lets users
+    # set any directive xzSSH doesn't model first-class without a code
+    # change. Insertion order is preserved for deterministic output; the
+    # managed typed fields render first, so they win on a duplicate.
+    options: Dict[str, str] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, object]:
         data: Dict[str, object] = {
@@ -69,6 +75,7 @@ class Host:
             "local_forwards": [lf.to_dict() for lf in self.local_forwards],
             "remote_forwards": [rf.to_dict() for rf in self.remote_forwards],
             "dynamic_forwards": list(self.dynamic_forwards),
+            "options": dict(self.options),
             "tags": list(self.tags),
         }
         if self.user is not None:

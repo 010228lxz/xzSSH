@@ -12,6 +12,28 @@ from xzssh.platform import check_private_key_permissions, resolve_path
 # for `no`, which ssh itself accepts).
 STRICT_HOST_KEY_CHECKING_VALUES = {"yes", "no", "ask", "accept-new", "off"}
 
+# ssh_config directives xzSSH renders from its own typed fields. A
+# free-form `options` entry naming one of these (case-insensitively) is
+# shadowed — the managed field renders first and ssh takes the first
+# value — so we warn rather than silently ignore it. Lowercased for a
+# case-insensitive match (ssh directive names are case-insensitive).
+_MANAGED_DIRECTIVES = {
+    "hostname",
+    "user",
+    "port",
+    "identityfile",
+    "proxyjump",
+    "forwardagent",
+    "compression",
+    "serveraliveinterval",
+    "identitiesonly",
+    "stricthostkeychecking",
+    "userknownhostsfile",
+    "localforward",
+    "remoteforward",
+    "dynamicforward",
+}
+
 
 @dataclass
 class ValidationResult:
@@ -185,6 +207,18 @@ def _validate_host(
                 (host_label, "DynamicForward")
             )
             used_ports.add(dynamic_port)
+
+    for opt_key in host.options:
+        if not isinstance(opt_key, str) or not opt_key.strip():
+            result.errors.append(
+                f"hosts[{idx}].options keys must be non-empty strings"
+            )
+        elif opt_key.strip().lower() in _MANAGED_DIRECTIVES:
+            result.warnings.append(
+                f"Host '{host.alias}' option '{opt_key}' duplicates a "
+                "directive xzSSH manages from a dedicated field; the "
+                "managed value takes precedence and the option is ignored."
+            )
 
 
 def _validate_local_forward(

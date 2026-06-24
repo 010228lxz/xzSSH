@@ -147,15 +147,19 @@ commitments.
   reusing the host's user/port/ProxyJump). A brand-new host can now be
   stood up end-to-end without leaving xzSSH.
 
-- ☐ **Free-form `options: Dict[str, str]` passthrough on `Host`** (M).
-  Ends the per-field treadmill (each SSH directive currently touches
-  model/parser/validator/generator/`build_ssh_command`); unblocks
-  ControlMaster, SetEnv, RemoteCommand, ciphers, etc. in one change.
-  Render verbatim after the typed fields; validate keys lightly.
+- ✅ **Free-form `options: Dict[str, str]` passthrough on `Host` —
+  v0.21.0.** Ended the per-field treadmill: arbitrary `ssh_config`
+  directives via `add --option KEY=VALUE` (or the JSON), rendered
+  verbatim after the typed fields and injected as `-o Key=value` into
+  connect/which/test. Typed fields render first (win on a duplicate);
+  the validator warns on a managed-directive collision. Not yet
+  captured by `import` or compared by `sync`.
 
 - ☐ **Connection multiplexing** — `ControlMaster`/`ControlPath`/
-  `ControlPersist` (M). Highest daily-use SSH feature still missing;
-  pairs with `tunnel`. Could ride on the options passthrough.
+  `ControlPersist` (M). Now expressible ad hoc via the options
+  passthrough; a dedicated treatment (sane default `ControlPath` in the
+  state dir, pairing with `tunnel`) is still worthwhile. Highest
+  daily-use SSH feature still missing first-class.
 
 - ☐ **`known-hosts remove <alias>`** (S) — wrap `ssh-keygen -R
   host[:port]` (honouring the host's `UserKnownHostsFile`) for the

@@ -6,7 +6,10 @@ gets back a structured report it can render or act on.
 
 Only ssh-representable fields participate: JSON-side metadata that
 cannot appear in an ``ssh_config`` (``tags``, ``last_used``) is neither
-compared nor ever overwritten by a file-wins resolution.
+compared nor ever overwritten by a file-wins resolution. The free-form
+``options`` passthrough is likewise excluded — ``generate`` writes it,
+but the importer doesn't model arbitrary directives, so comparing it
+would report spurious drift.
 
 Normalizations applied before comparing, to avoid false drift:
 
