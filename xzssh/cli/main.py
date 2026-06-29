@@ -16,8 +16,10 @@ from xzssh.cli.commands import (
     import_ as import_cmd,
     import_json as import_json_cmd,
     key as key_cmd,
+    known_hosts as known_hosts_cmd,
     list_ as list_cmd,
     menu as menu_cmd,
+    mosh as mosh_cmd,
     profile as profile_cmd,
     remove as remove_cmd,
     search as search_cmd,
@@ -191,6 +193,13 @@ def _dispatch(args, config_path: Path) -> int:
             print_help()
             return 0
         return tag_cmd.run(args, config_path)
+    if args.command == "mosh":
+        return mosh_cmd.run(args, config_path)
+    if args.command == "known-hosts":
+        if getattr(args, "known_hosts_command", None) is None:
+            print_help()
+            return 0
+        return known_hosts_cmd.run(args, config_path)
 
     print_help()
     return 2

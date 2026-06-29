@@ -161,9 +161,8 @@ commitments.
   state dir, pairing with `tunnel`) is still worthwhile. Highest
   daily-use SSH feature still missing first-class.
 
-- ☐ **`known-hosts remove <alias>`** (S) — wrap `ssh-keygen -R
-  host[:port]` (honouring the host's `UserKnownHostsFile`) for the
-  "host key changed" wall after a server rebuild.
+- ✅ **`known-hosts remove <alias>`** — shipped in **v0.23.0** (see
+  below).
 
 - ☐ **Wildcard / default `Host *` block** (L) — the biggest
   import-fidelity gap; the importer already warns it can't model it.
@@ -179,8 +178,12 @@ commitments.
 - ✅ **`tag add/rm` + `add --from` — v0.22.0.** Retag a host and clone a
   host as a template, both without an `edit` round-trip.
 
-- ☐ **Smaller polish** (each S): `history stats` (data is already
-  logged) and a `mosh` wrapper.
+- ✅ **`known-hosts remove` + `mosh` — v0.23.0.** ssh-keygen -R wrapper
+  (bracketed `[host]:port`, honours UserKnownHostsFile) and a mosh
+  transport wrapper that reuses the host's resolved ssh options.
+
+- ☐ **`history stats`** (S) — aggregate the existing event log
+  (most-used hosts, success rate, last failure).
 
 Two correctness items also surfaced in the review and were **fixed in
 v0.20.1**: the validator compares DynamicForward (with

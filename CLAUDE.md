@@ -15,7 +15,7 @@ Setup (creates `venv/`, installs in editable mode):
 .\install.bat          # Windows
 ```
 
-After install, the entry point `xzssh` (defined as `xzssh.cli.main:main`) is on `venv/bin/`. Running `xzssh` with no args drops into the interactive welcome menu; subcommands (`list`, `connect`, `add`, `remove`, `import`, `check`, `generate`, `key {add,list,add-agent,gen,copy-id}`, `tag {add,rm}`) are also available for scripting.
+After install, the entry point `xzssh` (defined as `xzssh.cli.main:main`) is on `venv/bin/`. Running `xzssh` with no args drops into the interactive welcome menu; subcommands (`list`, `connect`, `add`, `remove`, `import`, `check`, `generate`, `key {add,list,add-agent,gen,copy-id}`, `tag {add,rm}`, `mosh`, `known-hosts remove`) are also available for scripting.
 
 Tests (install with `pip install -e ".[dev]"` first to get pytest):
 
@@ -48,7 +48,7 @@ The pipeline is **Parse → Validate → Generate**, and every CLI command flows
   - [helpers.py](xzssh/cli/helpers.py) — shared helpers: `load_config_or_error`, `load_config_if_exists`, `write_config`, `parse_local_forward_arg`, `resolve_key_path`. **All config writes must go through `write_config`** so JSON formatting stays consistent.
   - [tunnels.py](xzssh/cli/tunnels.py) — tunnel state records (pid, alias, forwards) for `tunnel start --detach`; lives in the platform *state* dir (`$XDG_STATE_HOME/xzssh/tunnels.json`, `$XZSSH_TUNNELS_FILE` overrides). State is disposable: corrupt files degrade to empty, dead pids are pruned on `tunnel list`.
   - [profiles.py](xzssh/cli/profiles.py) — the profile registry (named pointers to alternate config files; JSON at `~/.config/xzssh/profiles.json`, `$XZSSH_PROFILES_FILE` overrides) and `resolve_config_path(config_arg, profile_arg)`, which `main` calls to pick the active config (`--config` > `--profile` > `$XZSSH_PROFILE` > default profile > platform default). The `profile` subcommand is dispatched **before** resolution so a dangling default can't lock the user out of repairing the registry. The test suite pins `XZSSH_PROFILES_FILE` to a tmp path in [tests/conftest.py](tests/conftest.py).
-  - [commands/](xzssh/cli/commands/) — one module per subcommand, each exposing a `run(...)`. Leaf commands (`add`, `remove`, `connect`, `import_`, `check`, `generate`, `key`, `tag`) only depend on `helpers` and `ui`. `list_` also calls into `add`/`remove` for its interactive submenu. `menu` ties everything together — both `default_menu` (no-args welcome) and `main_menu` (`xzssh menu`) live here.
+  - [commands/](xzssh/cli/commands/) — one module per subcommand, each exposing a `run(...)`. Leaf commands (`add`, `remove`, `connect`, `import_`, `check`, `generate`, `key`, `tag`, `mosh`, `known_hosts`) only depend on `helpers` and `ui`. `list_` also calls into `add`/`remove` for its interactive submenu. `menu` ties everything together — both `default_menu` (no-args welcome) and `main_menu` (`xzssh menu`) live here.
 - **[xzssh/cli/ui.py](xzssh/cli/ui.py)** — `rich.Console` + `questionary` prompt helpers, themed via `PALETTES` (`neon` default, `classic`, `high-contrast`, `mono`). UI styling is centralized here — command handlers must only use the semantic style names (`[alias]`, `[error]`, `[accent]`, …), never raw colors, or the non-neon themes break. `apply_theme()` mutates the module-global consoles in place (so `from ui import console` references stay valid); theme resolution (`--theme` > `$XZSSH_THEME` > registry pref > default) lives in `profiles.resolve_theme`.
 
 ### Conventions worth knowing

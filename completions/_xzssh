@@ -188,6 +188,23 @@ _xzssh_history() {
   esac
 }
 
+_xzssh_known_hosts() {
+  local curcontext="$curcontext" state line
+  _arguments -C '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      _describe -t commands 'known-hosts subcommand' \
+        '(remove:Remove a host'"'"'s cached key after a rebuild)'
+      ;;
+    subarg)
+      case $line[1] in
+        remove) _arguments '--dry-run[Print the ssh-keygen command only]' \
+              '1:host alias:_xzssh_aliases' ;;
+      esac
+      ;;
+  esac
+}
+
 _xzssh_tag() {
   local curcontext="$curcontext" state line
   _arguments -C '1: :->subcommand' '*:: :->subarg'
@@ -245,6 +262,8 @@ _xzssh_commands() {
     'remove:Remove a host'
     'search:Search hosts by alias, hostname, user, tag, or proxy-jump'
     'which:Print the resolved ssh command line for a host'
+    'mosh:Connect with mosh using a host'"'"'s settings'
+    'known-hosts:Manage cached host keys (~/.ssh/known_hosts)'
     'test:Probe connectivity without opening a shell'
     'tunnel:Open a host'"'"'s port-forwards without a shell'
     'import:Import from an OpenSSH config'
@@ -305,6 +324,10 @@ _xzssh() {
             '--dry-run[Print the ssh command without connecting]' \
             '1:host alias:_xzssh_aliases' && ret=0 ;;
         which|edit) _arguments '1:host alias:_xzssh_aliases' && ret=0 ;;
+        mosh)
+          _arguments '--dry-run[Print the mosh command only]' \
+            '1:host alias:_xzssh_aliases' && ret=0 ;;
+        known-hosts) _xzssh_known_hosts && ret=0 ;;
         remove)
           _arguments '--all[Remove all hosts]' \
             '--dry-run[Show which hosts would be removed]' \

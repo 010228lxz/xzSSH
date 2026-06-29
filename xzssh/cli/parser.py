@@ -563,6 +563,42 @@ def build_parser() -> argparse.ArgumentParser:
         help="Clear the persisted theme preference",
     )
 
+    mosh_parser = subparsers.add_parser(
+        "mosh", parents=[parent], help="Connect with mosh using a host's settings"
+    )
+    mosh_alias = mosh_parser.add_argument(
+        "alias", help="Alias of the host to connect to"
+    )
+    mosh_alias.completer = alias_completer  # type: ignore[attr-defined]
+    mosh_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the resolved mosh command without connecting",
+    )
+
+    known_hosts_parser = subparsers.add_parser(
+        "known-hosts",
+        parents=[parent],
+        help="Manage cached host keys (~/.ssh/known_hosts)",
+    )
+    known_hosts_subparsers = known_hosts_parser.add_subparsers(
+        dest="known_hosts_command", required=False
+    )
+    kh_remove = known_hosts_subparsers.add_parser(
+        "remove",
+        parents=[parent],
+        help="Remove a host's cached key (ssh-keygen -R) after a rebuild",
+    )
+    kh_remove_alias = kh_remove.add_argument(
+        "alias", help="Alias of the host whose cached key to drop"
+    )
+    kh_remove_alias.completer = alias_completer  # type: ignore[attr-defined]
+    kh_remove.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Print the ssh-keygen command without changing known_hosts",
+    )
+
     tag_parser = subparsers.add_parser(
         "tag", parents=[parent], help="Add or remove tags on a host"
     )

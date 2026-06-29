@@ -109,6 +109,8 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | `which <alias>` | Print the resolved `ssh` command line without running it. |
 | `search <query>` | Search hosts by alias, hostname, user, tag, or proxy-jump. |
 | `test [alias]` | Probe connectivity (`--all` for every host) without opening a shell. |
+| `mosh <alias>` | Connect with [mosh](https://mosh.org/) using the host's port/identity/jump/options. |
+| `known-hosts remove <alias>` | Drop a host's cached key (`ssh-keygen -R`) after a server rebuild. |
 | `tunnel start <alias>` | Open the host's port-forwards without a shell (`--detach` to background; `tunnel list` / `tunnel stop`). |
 | `history` | Recent connections with exit codes (opt-in: `history enable`; hosts tagged `no-log` are never recorded). |
 | `scp` / `sftp` / `rsync` | Transfer wrappers that rewrite `alias:path` and inject the host's port/identity/jump options. |
