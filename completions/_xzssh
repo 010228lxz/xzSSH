@@ -188,8 +188,27 @@ _xzssh_history() {
   esac
 }
 
+_xzssh_tag() {
+  local curcontext="$curcontext" state line
+  _arguments -C '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      local -a subcmds
+      subcmds=(
+        'add:Add tag(s) to a host'
+        'rm:Remove tag(s) from a host'
+      )
+      _describe -t commands 'tag subcommand' subcmds
+      ;;
+    subarg)
+      _arguments '1:host alias:_xzssh_aliases' '*:tag:'
+      ;;
+  esac
+}
+
 _xzssh_add() {
   _arguments \
+    '--from[Clone an existing host as a template]:source alias:_xzssh_aliases' \
     '--alias[Host alias]:alias:' \
     '--host-name[Hostname or IP]:hostname:_hosts' \
     '--user[SSH user]:user:' \
@@ -238,6 +257,7 @@ _xzssh_commands() {
     'encrypt:Encrypt the JSON config at rest'
     'decrypt:Store the JSON config as plaintext again'
     'key:Manage keys'
+    'tag:Add or remove tags on a host'
     'profile:Manage config profiles'
     'theme:Show or set the UI color theme'
     'scp:Run scp with alias rewriting'
@@ -273,6 +293,7 @@ _xzssh() {
       curcontext="${curcontext%:*:*}:xzssh-$line[1]:"
       case $line[1] in
         key) _xzssh_key && ret=0 ;;
+        tag) _xzssh_tag && ret=0 ;;
         tunnel) _xzssh_tunnel && ret=0 ;;
         profile) _xzssh_profile && ret=0 ;;
         history) _xzssh_history && ret=0 ;;

@@ -22,6 +22,7 @@ from xzssh.cli.commands import (
     remove as remove_cmd,
     search as search_cmd,
     sync as sync_cmd,
+    tag as tag_cmd,
     test as test_cmd,
     theme as theme_cmd,
     transfer as transfer_cmd,
@@ -185,6 +186,11 @@ def _dispatch(args, config_path: Path) -> int:
             print_help()
             return 0
         return key_cmd.run(args, config_path)
+    if args.command == "tag":
+        if getattr(args, "tag_command", None) is None:
+            print_help()
+            return 0
+        return tag_cmd.run(args, config_path)
 
     print_help()
     return 2

@@ -86,6 +86,31 @@ def key_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
     return _matches(prefix, config.keys.keys())
 
 
+def tag_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
+    """argcomplete completer for tags (used by ``tag rm``).
+
+    When an alias has already been typed, only that host's tags are
+    offered; otherwise every tag in the config is a candidate.
+    """
+    try:
+        config = _load_for_completion(_completion_config_path(parsed_args))
+    except (ConfigParseError, OSError, ValueError):
+        return []
+    if config is None:
+        return []
+
+    alias = getattr(parsed_args, "alias", None)
+    if alias:
+        host = next((h for h in config.hosts if h.alias == alias), None)
+        if host is not None:
+            return _matches(prefix, host.tags)
+
+    tags = set()
+    for host in config.hosts:
+        tags.update(host.tags)
+    return _matches(prefix, tags)
+
+
 def profile_completer(prefix: str, parsed_args, **_kwargs) -> List[str]:
     """argcomplete completer that returns registered profile names."""
     try:

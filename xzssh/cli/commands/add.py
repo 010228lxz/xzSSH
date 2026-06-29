@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from xzssh.cli.helpers import (
     load_config_if_exists,
@@ -24,7 +24,23 @@ from xzssh.validator import validate_config
 
 
 def run(args: argparse.Namespace, config_path: Path) -> int:
-    if not args.alias or not args.host_name:
+    from_alias = getattr(args, "from_alias", None)
+
+    with status("Preparing to add host"):
+        config = load_config_if_exists(config_path)
+    if config is None:
+        config = Config(hosts=[])
+
+    source: Optional[Host] = None
+    if from_alias:
+        source = next((h for h in config.hosts if h.alias == from_alias), None)
+        if source is None:
+            print_error(f"--from: source host not found: {from_alias}")
+            return 1
+        if not args.alias:
+            print_error("--from requires a new --alias for the cloned host.")
+            return 2
+    elif not args.alias or not args.host_name:
         details = prompt_host_details()
         if not details:
             print_error("Host addition cancelled.")
@@ -36,11 +52,6 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
         args.identity_file = details["identity_file"]
         args.proxy_jump = details.get("proxy_jump")
         args.tag = details.get("tags", [])
-
-    with status("Preparing to add host"):
-        config = load_config_if_exists(config_path)
-    if config is None:
-        config = Config(hosts=[])
 
     local_forwards: List[LocalForward] = []
     for raw in args.local_forward:
@@ -67,24 +78,53 @@ def run(args: argparse.Namespace, config_path: Path) -> int:
             return 2
         options[opt_key] = opt_value
 
+    # When cloning (--from), an unset scalar / empty list inherits the
+    # source host's value; an explicit flag always wins. last_used is
+    # never copied — the clone hasn't been connected to.
+    def scalar(provided, attr):
+        if provided is not None:
+            return provided
+        return getattr(source, attr) if source else None
+
+    def listf(provided, parsed, attr):
+        if provided:
+            return parsed
+        return list(getattr(source, attr)) if source else list(parsed)
+
     new_host = Host(
         alias=args.alias,
-        host_name=args.host_name,
-        user=args.user,
-        port=args.port,
-        identity_file=args.identity_file,
-        proxy_jump=getattr(args, "proxy_jump", None),
-        forward_agent=getattr(args, "forward_agent", None),
-        compression=getattr(args, "compression", None),
-        server_alive_interval=getattr(args, "server_alive_interval", None),
-        identities_only=getattr(args, "identities_only", None),
-        strict_host_key_checking=getattr(args, "strict_host_key_checking", None),
-        user_known_hosts_file=getattr(args, "user_known_hosts_file", None),
-        local_forwards=local_forwards,
-        remote_forwards=remote_forwards,
-        dynamic_forwards=list(getattr(args, "dynamic_forward", []) or []),
-        tags=args.tag,
-        options=options,
+        host_name=scalar(args.host_name, "host_name"),
+        user=scalar(args.user, "user"),
+        port=scalar(args.port, "port"),
+        identity_file=scalar(args.identity_file, "identity_file"),
+        proxy_jump=scalar(getattr(args, "proxy_jump", None), "proxy_jump"),
+        forward_agent=scalar(getattr(args, "forward_agent", None), "forward_agent"),
+        compression=scalar(getattr(args, "compression", None), "compression"),
+        server_alive_interval=scalar(
+            getattr(args, "server_alive_interval", None), "server_alive_interval"
+        ),
+        identities_only=scalar(
+            getattr(args, "identities_only", None), "identities_only"
+        ),
+        strict_host_key_checking=scalar(
+            getattr(args, "strict_host_key_checking", None),
+            "strict_host_key_checking",
+        ),
+        user_known_hosts_file=scalar(
+            getattr(args, "user_known_hosts_file", None), "user_known_hosts_file"
+        ),
+        local_forwards=listf(args.local_forward, local_forwards, "local_forwards"),
+        remote_forwards=listf(
+            getattr(args, "remote_forward", []) or [], remote_forwards,
+            "remote_forwards",
+        ),
+        dynamic_forwards=listf(
+            getattr(args, "dynamic_forward", []) or [],
+            list(getattr(args, "dynamic_forward", []) or []),
+            "dynamic_forwards",
+        ),
+        tags=listf(args.tag, args.tag, "tags"),
+        options=options if options else (dict(source.options) if source else {}),
     )
 
     replaced = False

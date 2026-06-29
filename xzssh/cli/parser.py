@@ -8,6 +8,7 @@ from xzssh.cli.completion import (
     alias_completer,
     key_completer,
     profile_completer,
+    tag_completer,
 )
 from xzssh.cli.ui import available_themes, print_error, print_notice
 
@@ -242,6 +243,14 @@ def build_parser() -> argparse.ArgumentParser:
         "for anything xzSSH has no dedicated flag for "
         "(e.g. --option ControlMaster=auto --option 'SetEnv=FOO=bar')",
     )
+    add_from = add_parser.add_argument(
+        "--from",
+        dest="from_alias",
+        metavar="ALIAS",
+        help="Clone an existing host as a template for the new one; any "
+        "explicit flag overrides the copied field (last_used is not copied)",
+    )
+    add_from.completer = alias_completer  # type: ignore[attr-defined]
     add_parser.add_argument(
         "--replace",
         action="store_true",
@@ -553,6 +562,30 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Clear the persisted theme preference",
     )
+
+    tag_parser = subparsers.add_parser(
+        "tag", parents=[parent], help="Add or remove tags on a host"
+    )
+    tag_subparsers = tag_parser.add_subparsers(dest="tag_command", required=False)
+
+    tag_add = tag_subparsers.add_parser(
+        "add", parents=[parent], help="Add tag(s) to a host"
+    )
+    tag_add_alias = tag_add.add_argument("alias", help="Alias of the host to tag")
+    tag_add_alias.completer = alias_completer  # type: ignore[attr-defined]
+    tag_add.add_argument(
+        "tags", nargs="+", metavar="TAG", help="One or more tags to add"
+    )
+
+    tag_rm = tag_subparsers.add_parser(
+        "rm", parents=[parent], help="Remove tag(s) from a host"
+    )
+    tag_rm_alias = tag_rm.add_argument("alias", help="Alias of the host")
+    tag_rm_alias.completer = alias_completer  # type: ignore[attr-defined]
+    tag_rm_tags = tag_rm.add_argument(
+        "tags", nargs="+", metavar="TAG", help="One or more tags to remove"
+    )
+    tag_rm_tags.completer = tag_completer  # type: ignore[attr-defined]
 
     key_parser = subparsers.add_parser("key", parents=[parent], help="Manage keys")
     key_subparsers = key_parser.add_subparsers(dest="key_command", required=False)

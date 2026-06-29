@@ -176,9 +176,11 @@ commitments.
   `completion install` polish idea for zsh; argcomplete still covers
   bash/fish.)
 
+- ✅ **`tag add/rm` + `add --from` — v0.22.0.** Retag a host and clone a
+  host as a template, both without an `edit` round-trip.
+
 - ☐ **Smaller polish** (each S): `history stats` (data is already
-  logged), `add --from <alias>` (clone a host as a template), a `mosh`
-  wrapper, and `tag add/rm <alias>` (retag without an `edit` round-trip).
+  logged) and a `mosh` wrapper.
 
 Two correctness items also surfaced in the review and were **fixed in
 v0.20.1**: the validator compares DynamicForward (with
