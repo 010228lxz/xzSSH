@@ -1,0 +1,329 @@
+#compdef xzssh
+# Native zsh completion for xzSSH.
+#
+# Renders commands, sub-commands, and options as separate, labelled
+# groups (via `_describe -t` + `_arguments`) instead of argcomplete's
+# single flat list — so `xzssh key <TAB>` shows a "key subcommand" group
+# distinct from the global options. Argument positions complete live
+# from the active config: host aliases, registered keys, and profiles.
+#
+# Install: put this file on $fpath (e.g. ~/.zsh/completions) and
+#   autoload -Uz _xzssh && compdef _xzssh xzssh
+# It supersedes `register-python-argcomplete xzssh`.
+
+# --- live data helpers ------------------------------------------------------
+
+# Resolve the config path the same way the CLI does for these completions:
+# an explicit --config on the line wins, else $XZSSH_JSON, else the default.
+_xzssh_config_path() {
+  local i
+  for (( i = 1; i <= $#words; i++ )); do
+    case $words[i] in
+      --config) print -r -- ${~words[i+1]}; return ;;
+      --config=*) print -r -- ${~words[i]#--config=}; return ;;
+    esac
+  done
+  print -r -- ${XZSSH_JSON:-$HOME/.ssh/xzssh.json}
+}
+
+_xzssh_aliases() {
+  local cfg; cfg=$(_xzssh_config_path)
+  [[ -r $cfg ]] || return
+  local -a items
+  items=(${(f)"$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+for h in d.get("hosts", []):
+    a = h.get("alias")
+    if a:
+        print(a)
+' "$cfg" 2>/dev/null)"})
+  (( $#items )) && _describe -t aliases 'host alias' items
+}
+
+_xzssh_keys() {
+  local cfg; cfg=$(_xzssh_config_path)
+  [[ -r $cfg ]] || return
+  local -a items
+  items=(${(f)"$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+for k in d.get("keys", {}):
+    print(k)
+' "$cfg" 2>/dev/null)"})
+  (( $#items )) && _describe -t keys 'registered key' items
+}
+
+_xzssh_profiles() {
+  local pf=${XZSSH_PROFILES_FILE:-$HOME/.config/xzssh/profiles.json}
+  [[ -r $pf ]] || return
+  local -a items
+  items=(${(f)"$(python3 -c '
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+except Exception:
+    sys.exit(0)
+for p in d.get("profiles", {}):
+    print(p)
+' "$pf" 2>/dev/null)"})
+  (( $#items )) && _describe -t profiles 'profile' items
+}
+
+# --- sub-command dispatchers ------------------------------------------------
+
+_xzssh_key() {
+  local curcontext="$curcontext" state line
+  _arguments -C '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      local -a subcmds
+      subcmds=(
+        'add:Add a key reference'
+        'list:List configured keys'
+        'add-agent:Add key to ssh-agent'
+        'gen:Generate a new keypair with ssh-keygen and register it'
+        'copy-id:Install a public key on a host with ssh-copy-id'
+      )
+      _describe -t commands 'key subcommand' subcmds
+      ;;
+    subarg)
+      case $line[1] in
+        add)
+          _arguments '--replace[Replace existing key with the same name]' \
+            '1:key name:' '2:key file:_files' ;;
+        add-agent)
+          _arguments '--keychain[macOS: store the passphrase in the Keychain]' \
+            '1:key name:_xzssh_keys' ;;
+        gen)
+          _arguments \
+            '(--type -t)'{--type,-t}'[Key type]:type:(ed25519 rsa ecdsa)' \
+            '(--bits -b)'{--bits,-b}'[Key size in bits]:bits:' \
+            '(--comment -C)'{--comment,-C}'[Key comment]:comment:' \
+            '--no-passphrase[Create the key with an empty passphrase]' \
+            '--no-register[Generate the key file only; do not register]' \
+            '--replace[Overwrite an existing key file and/or name]' \
+            '1:key name:' '2:key file:_files' ;;
+        copy-id)
+          _arguments \
+            '--key[Registered key to install]:key:_xzssh_keys' \
+            '--dry-run[Print the ssh-copy-id command without running it]' \
+            '1:host alias:_xzssh_aliases' ;;
+      esac
+      ;;
+  esac
+}
+
+_xzssh_tunnel() {
+  local curcontext="$curcontext" state line
+  _arguments -C '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      local -a subcmds
+      subcmds=(
+        'start:Open the tunnel (ssh -N)'
+        'list:Show recorded tunnels and their status'
+        'stop:Stop a background tunnel'
+      )
+      _describe -t commands 'tunnel subcommand' subcmds
+      ;;
+    subarg)
+      case $line[1] in
+        start) _arguments '--detach[Run in the background]' '1:host alias:_xzssh_aliases' ;;
+        stop) _arguments '--all[Stop every recorded tunnel]' '1:host alias:_xzssh_aliases' ;;
+      esac
+      ;;
+  esac
+}
+
+_xzssh_profile() {
+  local curcontext="$curcontext" state line
+  _arguments -C '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      local -a subcmds
+      subcmds=(
+        'add:Register a named config file'
+        'list:List registered profiles'
+        'use:Set the default profile'
+        'remove:Unregister a profile (keeps its config file)'
+      )
+      _describe -t commands 'profile subcommand' subcmds
+      ;;
+    subarg)
+      case $line[1] in
+        add) _arguments '--default[Also make this the default profile]' \
+              '--replace[Replace an existing profile of the same name]' \
+              '1:profile name:' '2:config file:_files' ;;
+        use|remove) _arguments '1:profile:_xzssh_profiles' ;;
+      esac
+      ;;
+  esac
+}
+
+_xzssh_history() {
+  local curcontext="$curcontext" state line
+  _arguments -C '--limit[Show at most N entries]:n:' '1: :->subcommand' '*:: :->subarg'
+  case $state in
+    subcommand)
+      local -a subcmds
+      subcmds=(
+        'enable:Opt in to connection logging'
+        'disable:Stop logging (keeps the log file)'
+        'clear:Delete the log file'
+      )
+      _describe -t commands 'history subcommand' subcmds
+      ;;
+    subarg)
+      case $line[1] in
+        enable) _arguments '--file[Log file path]:file:_files' ;;
+      esac
+      ;;
+  esac
+}
+
+_xzssh_add() {
+  _arguments \
+    '--alias[Host alias]:alias:' \
+    '--host-name[Hostname or IP]:hostname:_hosts' \
+    '--user[SSH user]:user:' \
+    '--port[Port]:port:' \
+    '--identity-file[Identity file]:file:_files' \
+    '--proxy-jump[Bastion host alias]:alias:_xzssh_aliases' \
+    '*--tag[Tag for the host]:tag:' \
+    '*--local-forward[local_port:remote_host:remote_port]:spec:' \
+    '*--remote-forward[remote_port:local_host:local_port]:spec:' \
+    '*--dynamic-forward[Local SOCKS proxy port]:port:' \
+    '*--option[Extra ssh_config directive (KEY=VALUE)]:option:' \
+    '--forward-agent[Enable ssh-agent forwarding]' \
+    '--no-forward-agent[Disable ssh-agent forwarding]' \
+    '--compression[Enable compression]' \
+    '--no-compression[Disable compression]' \
+    '--identities-only[Only use the configured IdentityFile]' \
+    '--no-identities-only[Do not force IdentitiesOnly]' \
+    '--server-alive-interval[Keepalive interval in seconds]:seconds:' \
+    '--strict-host-key-checking[Policy]:policy:(yes no ask accept-new off)' \
+    '--user-known-hosts-file[UserKnownHostsFile path]:file:_files' \
+    '--replace[Replace existing host with the same alias]'
+}
+
+# --- top level --------------------------------------------------------------
+
+_xzssh_commands() {
+  local -a cmds
+  cmds=(
+    'list:List configured hosts'
+    'connect:Connect to a host'
+    'menu:Open interactive management menu'
+    'add:Add a host'
+    'edit:Edit a host'"'"'s JSON entry in $EDITOR'
+    'remove:Remove a host'
+    'search:Search hosts by alias, hostname, user, tag, or proxy-jump'
+    'which:Print the resolved ssh command line for a host'
+    'test:Probe connectivity without opening a shell'
+    'tunnel:Open a host'"'"'s port-forwards without a shell'
+    'import:Import from an OpenSSH config'
+    'import-json:Restore the config from a JSON snapshot'
+    'export:Print a JSON snapshot of the config'
+    'generate:Generate ~/.ssh/config'
+    'sync:Detect and resolve drift with ~/.ssh/config'
+    'check:Validate the config'
+    'history:Show recent connections'
+    'encrypt:Encrypt the JSON config at rest'
+    'decrypt:Store the JSON config as plaintext again'
+    'key:Manage keys'
+    'profile:Manage config profiles'
+    'theme:Show or set the UI color theme'
+    'scp:Run scp with alias rewriting'
+    'sftp:Run sftp against an alias'
+    'rsync:Run rsync with alias rewriting'
+  )
+  _describe -t commands 'xzssh command' cmds
+}
+
+_xzssh() {
+  local curcontext="$curcontext" state line ret=1
+  typeset -A opt_args
+
+  local -a global_opts
+  global_opts=(
+    '--config[Path to JSON config file]:config file:_files'
+    '--profile[Use a registered profile]:profile:_xzssh_profiles'
+    '--theme[UI color theme]:theme:(classic high-contrast mono neon)'
+    '--suggest-ports[Suggest next free LocalForward port on conflict]'
+    '(-h --help)'{-h,--help}'[Show this help message and exit]'
+  )
+
+  _arguments -C \
+    $global_opts \
+    '1: :->command' \
+    '*:: :->args' && ret=0
+
+  case $state in
+    command)
+      _xzssh_commands && ret=0
+      ;;
+    args)
+      curcontext="${curcontext%:*:*}:xzssh-$line[1]:"
+      case $line[1] in
+        key) _xzssh_key && ret=0 ;;
+        tunnel) _xzssh_tunnel && ret=0 ;;
+        profile) _xzssh_profile && ret=0 ;;
+        history) _xzssh_history && ret=0 ;;
+        add) _xzssh_add && ret=0 ;;
+        connect)
+          _arguments \
+            '*--tag[Restrict fuzzy-search choices to this tag]:tag:' \
+            '--match-all[Require ALL given tags (AND)]' \
+            '--dry-run[Print the ssh command without connecting]' \
+            '1:host alias:_xzssh_aliases' && ret=0 ;;
+        which|edit) _arguments '1:host alias:_xzssh_aliases' && ret=0 ;;
+        remove)
+          _arguments '--all[Remove all hosts]' \
+            '--dry-run[Show which hosts would be removed]' \
+            '*:host alias:_xzssh_aliases' && ret=0 ;;
+        test)
+          _arguments '--all[Probe every configured host]' \
+            '--timeout[Per-host connect timeout]:seconds:' \
+            '1:host alias:_xzssh_aliases' && ret=0 ;;
+        search) _arguments '1:query:' && ret=0 ;;
+        list)
+          _arguments '*--tag[Show only hosts with this tag]:tag:' \
+            '--match-all[Require ALL given tags (AND)]' && ret=0 ;;
+        import) _arguments '--overwrite[Overwrite existing hosts]' \
+              '1:ssh config file:_files' && ret=0 ;;
+        import-json)
+          _arguments '(--replace)--merge[Add new, keep existing on conflict]' \
+            '(--merge)--replace[Replace the whole config]' \
+            '1:snapshot file:_files' && ret=0 ;;
+        export) _arguments '--output[Write the snapshot to this file]:file:_files' && ret=0 ;;
+        generate)
+          _arguments '--output[Output path]:file:_files' \
+            '--force[Overwrite a non-xzSSH file]' \
+            '--dry-run[Print the output without writing]' && ret=0 ;;
+        sync)
+          _arguments '--output[OpenSSH config to compare]:file:_files' \
+            '--prefer[Resolve all drift one way]:direction:(json file)' \
+            '(-i --interactive)'{-i,--interactive}'[Choose per drifted host]' \
+            '--force[Allow overwriting unmodeled constructs]' && ret=0 ;;
+        encrypt) _arguments '--tool[Encryption tool]:tool:(gpg age)' && ret=0 ;;
+        theme) _arguments '--unset[Clear the persisted theme]' \
+              '1:theme:(classic high-contrast mono neon)' && ret=0 ;;
+        scp|sftp|rsync)
+          _arguments '--dry-run[Print the resolved command]' \
+            '*:args:_files' && ret=0 ;;
+        *) ret=0 ;;
+      esac
+      ;;
+  esac
+
+  return ret
+}
+
+_xzssh "$@"

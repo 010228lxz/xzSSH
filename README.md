@@ -57,25 +57,36 @@ xzssh
 
 ### ⌨️ Tab Completion (optional)
 
-xzSSH supports tab-completion for host aliases on bash, zsh, and fish via
-[argcomplete](https://kislyuk.github.io/argcomplete/). Once installed, hit
-`<TAB>` after `xzssh connect`, `xzssh test`, or `xzssh remove` to autocomplete
-from your configured aliases — no need to remember them.
+**zsh (recommended)** — a native completion that groups commands,
+sub-commands, and options into labelled sections (and completes live
+host aliases / keys / profiles from your config) ships in
+[`completions/_xzssh`](completions/_xzssh):
 
-```bash
-# install the optional dep
-pip install 'xzssh[completion]'
-
-# one-line shell hook (bash/zsh):
-eval "$(register-python-argcomplete xzssh)"
-
-# add it to your ~/.bashrc or ~/.zshrc so it sticks across sessions.
-# fish users:
-register-python-argcomplete --shell fish xzssh | source
+```zsh
+# put it on your fpath, then register it (compinit must run first)
+mkdir -p ~/.zsh/completions
+ln -sf "$PWD/completions/_xzssh" ~/.zsh/completions/_xzssh
+# in ~/.zshrc:
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz _xzssh && compdef _xzssh xzssh
+# optional polish: grouped headers, menu select, colors
+zstyle ':completion:*' menu select
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '%F{cyan}%B%d%b%f'
 ```
 
-The completion shim is a no-op when argcomplete isn't installed; the
-rest of the CLI works exactly as before.
+**bash / fish (or a simpler zsh setup)** — dynamic completion via
+[argcomplete](https://kislyuk.github.io/argcomplete/):
+
+```bash
+pip install 'xzssh[completion]'
+eval "$(register-python-argcomplete xzssh)"        # bash/zsh; add to your rc file
+register-python-argcomplete --shell fish xzssh | source   # fish
+```
+
+Both complete from your configured aliases so you never have to remember
+them. The argcomplete shim is a no-op when argcomplete isn't installed;
+the rest of the CLI works exactly as before.
 
 ### ⌨️ Interactive Usage
 

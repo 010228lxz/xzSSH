@@ -169,9 +169,15 @@ commitments.
   import-fidelity gap; the importer already warns it can't model it.
   Risky: precedence semantics + `sync/diff` interaction.
 
+- ✅ **Native zsh completion + friendly command-typo errors — v0.21.1.**
+  `completions/_xzssh` groups commands/sub-commands/options and completes
+  live aliases/keys/profiles; a mistyped sub-command now gets a themed
+  "did you mean?" instead of argparse's raw dump. (Supersedes the
+  `completion install` polish idea for zsh; argcomplete still covers
+  bash/fish.)
+
 - ☐ **Smaller polish** (each S): `history stats` (data is already
-  logged), `add --from <alias>` (clone a host as a template),
-  `completion install` (write the shell activation snippet), a `mosh`
+  logged), `add --from <alias>` (clone a host as a template), a `mosh`
   wrapper, and `tag add/rm <alias>` (retag without an `edit` round-trip).
 
 Two correctness items also surfaced in the review and were **fixed in

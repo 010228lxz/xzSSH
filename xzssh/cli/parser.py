@@ -1,13 +1,48 @@
 from __future__ import annotations
 
 import argparse
+import difflib
+import re
 
 from xzssh.cli.completion import (
     alias_completer,
     key_completer,
     profile_completer,
 )
-from xzssh.cli.ui import available_themes
+from xzssh.cli.ui import available_themes, print_error, print_notice
+
+
+class _SuggestingArgumentParser(argparse.ArgumentParser):
+    """ArgumentParser that turns a mistyped sub-command into a themed
+    'did you mean?' message instead of argparse's raw usage-block dump.
+
+    Only sub-command choices are intercepted (dest ``command`` or
+    ``*_command``); invalid *option* values like ``--theme sparkly`` keep
+    argparse's default error so the listed valid choices still show. The
+    subparsers created from this parser inherit the class, so nested
+    typos (``xzssh key gne``) get the same treatment.
+    """
+
+    # Matches e.g. "argument command: invalid choice: 'lsit' (choose from
+    # 'list', 'connect', ...)" — but NOT "argument --theme: invalid choice".
+    _BAD_SUBCOMMAND = re.compile(
+        r"argument (?:command|\w+_command): invalid choice: "
+        r"'([^']+)' \(choose from (.+)\)"
+    )
+
+    def error(self, message: str):  # noqa: D102 (argparse override)
+        match = self._BAD_SUBCOMMAND.search(message)
+        if match is None:
+            super().error(message)  # default usage dump + exit(2)
+            return
+        bad = match.group(1)
+        choices = re.findall(r"'([^']+)'", match.group(2))
+        print_error(f"Unknown command: [accent]{bad}[/accent]")
+        suggestion = difflib.get_close_matches(bad, choices, n=1, cutoff=0.5)
+        if suggestion:
+            print_notice(f"Did you mean [accent]{suggestion[0]}[/accent]?")
+        print_notice("Run [accent]xzssh --help[/accent] for the full command list.")
+        self.exit(2)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,7 +78,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Suggest next free LocalForward port when conflicts are found",
     )
 
-    parser = argparse.ArgumentParser(prog="xzssh", add_help=False)
+    parser = _SuggestingArgumentParser(prog="xzssh", add_help=False)
     parser.add_argument(
         "--config",
         help="Path to JSON config file (default: ~/.ssh/xzssh.json)",
