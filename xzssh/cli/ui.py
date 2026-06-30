@@ -51,6 +51,16 @@ PALETTES = {
             "separator": "#FF00FF",
             "text": "#ffffff",
             "muted": "#666666",
+            # Connect autocomplete dropdown: alias column + hostname (meta)
+            # column. The hostname gets a distinct color so it's easy to
+            # pick out, and the hovered row a dark-green tint (not the
+            # default loud yellow) with a bright cyan hostname.
+            "menu_bg": "#1c1c1c",
+            "menu_fg": "#cccccc",
+            "menu_sel_bg": "#143d14",
+            "menu_sel_fg": "#7CFF6B bold",
+            "menu_meta_fg": "#00d7d7",
+            "menu_meta_sel_fg": "#5FFBF1 bold",
         },
     },
     # Sober ANSI-named colors that respect the terminal's own scheme.
@@ -83,6 +93,12 @@ PALETTES = {
             "separator": "ansimagenta",
             "text": "",
             "muted": "ansibrightblack",
+            "menu_bg": "",
+            "menu_fg": "",
+            "menu_sel_bg": "ansibrightblack",
+            "menu_sel_fg": "ansibrightgreen bold",
+            "menu_meta_fg": "ansicyan",
+            "menu_meta_sel_fg": "ansibrightcyan bold",
         },
     },
     # Maximum legibility: bright colors, bold accents, no dim text.
@@ -115,6 +131,12 @@ PALETTES = {
             "separator": "ansibrightmagenta",
             "text": "ansibrightwhite",
             "muted": "ansiwhite",
+            "menu_bg": "#000000",
+            "menu_fg": "#ffffff",
+            "menu_sel_bg": "ansiwhite",
+            "menu_sel_fg": "ansiblack bold",
+            "menu_meta_fg": "ansibrightcyan",
+            "menu_meta_sel_fg": "ansiblack bold",
         },
     },
     # No color at all — emphasis only. For pipes, screenshots, and
@@ -148,6 +170,14 @@ PALETTES = {
             "separator": "",
             "text": "",
             "muted": "",
+            # No color: differentiate the hostname with italics and mark the
+            # hovered row with reverse video.
+            "menu_bg": "",
+            "menu_fg": "",
+            "menu_sel_bg": "",
+            "menu_sel_fg": "reverse bold",
+            "menu_meta_fg": "italic",
+            "menu_meta_sel_fg": "reverse italic",
         },
     },
 }
@@ -336,6 +366,52 @@ def get_radio_style():
         ('host', fg(text)),
         ('muted', fg(muted)),
     ])
+
+def get_autocomplete_style():
+    """Return a questionary Style for the connect autocomplete dropdown.
+
+    The completion column shows the alias; the meta column shows the
+    hostname. prompt_toolkit's defaults render the hostname in a hard-to-read
+    white and highlight the hovered row in loud yellow. Here the hostname
+    gets its own readable color (so it's easy to pick out) and the hovered
+    row a tasteful, theme-aware highlight.
+    """
+    prompt = PALETTES[_active_theme]["prompt"]
+
+    def style(bg: str, fg: str) -> str:
+        parts = []
+        if bg:
+            parts.append(f"bg:{bg}")
+        if fg:
+            parts.append(fg)
+        return " ".join(parts)
+
+    menu_bg = prompt.get("menu_bg", "")
+    menu_fg = prompt.get("menu_fg", "")
+    sel_bg = prompt.get("menu_sel_bg", "")
+    sel_fg = prompt.get("menu_sel_fg", "")
+    meta_fg = prompt.get("menu_meta_fg", "")
+    meta_sel_fg = prompt.get("menu_meta_sel_fg", "")
+
+    # Reuse the shared prompt tokens (qmark/question/answer) so the header
+    # line matches the rest of the UI, then style the completion menu. A bare
+    # token is read as the foreground; mono's accent is the attribute "bold"
+    # (not a color), so we must NOT prepend "fg:".
+    accent, muted = prompt["accent"], prompt["muted"]
+    return questionary.Style([
+        ('qmark', f"{accent} bold"),
+        ('question', 'bold'),
+        ('answer', f"{accent} bold"),
+        ('instruction', f"{muted} italic".strip()),
+        ('completion-menu', style(menu_bg, menu_fg)),
+        ('completion-menu.completion', style(menu_bg, menu_fg)),
+        ('completion-menu.completion.current', style(sel_bg, sel_fg)),
+        ('completion-menu.meta.completion', style(menu_bg, meta_fg)),
+        ('completion-menu.meta.completion.current', style(sel_bg, meta_sel_fg)),
+        ('scrollbar.background', style(menu_bg, "")),
+        ('scrollbar.button', style(sel_bg, "")),
+    ])
+
 
 def prompt_select_action(message: str, choices: List[questionary.Choice], shortcuts: Optional[Dict[str, str]] = None) -> str:
     """Interactively select an action using a radio-like selection with optional shortcuts."""

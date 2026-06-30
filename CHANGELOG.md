@@ -9,6 +9,32 @@ during the 0.x series.
 
 ## [Unreleased]
 
+## [0.23.1] — 2026-06-30
+
+UI polish and documentation accuracy.
+
+### Changed
+
+- **Readable `connect` picker colors.** `xzssh connect` (no alias) now
+  styles its autocomplete dropdown instead of falling back to
+  prompt_toolkit's defaults: the hostname (the meta column) gets a
+  distinct, readable color so it's easy to pick out, and the hovered row
+  a tasteful theme-aware highlight — replacing the previous loud yellow
+  on hover and hard-to-read white. Themed for all four palettes (`neon`,
+  `classic`, `high-contrast`, `mono`) via the new `get_autocomplete_style`.
+
+### Documentation
+
+- README **Key Features** refreshed to cover capabilities shipped since
+  the list was written (at-rest encryption, profiles, themes, tunnels,
+  history, sync, key lifecycle, `scp`/`sftp`/`rsync`, `mosh`).
+- Removed the README's `xzssh.pyz` zip-app install instructions — the
+  release workflow only publishes the native binaries, never a `.pyz`.
+- Corrected the README description of `install.sh` (it offers a symlink
+  and prints an alias snippet; it never edits your shell rc).
+- Completed the `CLAUDE.md` scripting-subcommand list, which had dropped
+  `sync`, `tunnel`, `profile`, `history`, and several others.
+
 ## [0.23.0] — 2026-06-29
 
 Two ssh-tooling wrappers, in the spirit of `key copy-id` / the scp/sftp

@@ -7,12 +7,16 @@
 
 ## ✨ Key Features
 
-- 🖥️ **Interactive Dashboard**: A keyboard-first, high-contrast neon TUI for managing and connecting to hosts.
-- ⚡ **Fuzzy Search**: Quickly find and connect to servers by alias, hostname, or user with instant keyboard shortcuts.
-- 🎨 **Neon Branding**: High-contrast modern aesthetics featuring Neon Green, Pink, and Cyan for better visual clarity.
+- 🖥️ **Interactive Dashboard**: A keyboard-first TUI for managing and connecting to hosts with single-key shortcuts.
+- ⚡ **Fuzzy Search**: Quickly find and connect to servers by alias, hostname, user, tag, or proxy-jump.
+- 🎨 **Themeable UI**: `neon` (default), `classic`, `high-contrast`, and `mono` themes via `--theme` / `$XZSSH_THEME`.
 - 🛠️ **Config Isolation**: Keeps your source configuration in a clean JSON file (`~/.ssh/xzssh.json`) and generates the final `~/.ssh/config` deterministically.
-- 🔒 **Security First**: Automatically manages file permissions (e.g., `chmod 600`) and validates key paths.
-- 📊 **Health Checks**: Detects duplicate aliases and LocalForward port conflicts across your entire fleet.
+- 🔒 **Security First**: Manages file permissions (`chmod 600`), validates key paths, and offers optional at-rest encryption of the JSON (`gpg` or `age`).
+- 📊 **Health Checks & Sync**: Detects duplicate aliases and Local/Remote/Dynamic forward port conflicts, and reports or resolves drift against `~/.ssh/config`.
+- 🔑 **Key Lifecycle**: Generate keys (`ssh-keygen`), install them on hosts (`ssh-copy-id`), and load them into `ssh-agent` (with macOS Keychain support).
+- 🚇 **Tunnels & Transfers**: Background port-forwards (`tunnel`), `scp`/`sftp`/`rsync` wrappers with alias rewriting, and `mosh` support.
+- 👤 **Profiles**: Register and switch between separate work / personal / client configs by name.
+- 🗂️ **Connection History**: Opt-in log of recent connections with exit codes (`no-log` tag honored).
 - 📥 **Easy Migration**: Import existing hosts directly from your standard OpenSSH config.
 
 ---
@@ -21,20 +25,14 @@
 
 ### 📦 Installation
 
-#### Single-File Distribution (Recommended for Sharing)
-For a standalone, source-protected experience without manually installing dependencies:
+#### Native Binaries (Recommended for Sharing)
+For a standalone experience with no Python or dependencies to install, download the
+binary for your platform from the [GitHub Releases](https://github.com/010228lxz/xzSSH/releases)
+page (`xzssh-linux`, `xzssh-macos`, or `xzssh-windows.exe`):
 
-- **macOS / Linux / Windows (Native Binaries)**:
-  Download the appropriate binary from the [GitHub Releases](https://github.com/010228lxz/xzSSH/releases) page.
-  1. Transfer the binary to the target machine.
-  2. (Linux/macOS) Grant execution permission: `chmod +x xzssh-linux` or `chmod +x xzssh-macos`.
-  3. Run it directly: `./xzssh-linux` or `xzssh-windows.exe`.
-
-- **Cross-Platform Zip-App (`xzssh.pyz`)**:
-  If you have Python 3.9+ installed, you can use the cross-platform `xzssh.pyz` file:
-  ```bash
-  python3 xzssh.pyz
-  ```
+1. Transfer the binary to the target machine.
+2. (Linux/macOS) Grant execution permission: `chmod +x xzssh-linux` or `chmod +x xzssh-macos`.
+3. Run it directly: `./xzssh-linux` or `xzssh-windows.exe`.
 
 #### Standard Source Installation
 Clone the repository and run the automated installation script:
@@ -46,7 +44,7 @@ cd xzSSH
 chmod +x install.sh
 ./install.sh
 ```
-The script sets up a virtual environment and optionally creates a global `xzssh` symlink or adds an alias to your `~/.zshrc`.
+The script sets up a virtual environment, installs xzSSH in editable mode, and optionally creates a global `xzssh` symlink in `/usr/local/bin` (it also prints an alias snippet you can drop into your `~/.zshrc` / `~/.bashrc`).
 
 #### Windows
 ```powershell

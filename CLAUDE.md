@@ -15,7 +15,7 @@ Setup (creates `venv/`, installs in editable mode):
 .\install.bat          # Windows
 ```
 
-After install, the entry point `xzssh` (defined as `xzssh.cli.main:main`) is on `venv/bin/`. Running `xzssh` with no args drops into the interactive welcome menu; subcommands (`list`, `connect`, `add`, `remove`, `import`, `check`, `generate`, `key {add,list,add-agent,gen,copy-id}`, `tag {add,rm}`, `mosh`, `known-hosts remove`) are also available for scripting.
+After install, the entry point `xzssh` (defined as `xzssh.cli.main:main`) is on `venv/bin/`. Running `xzssh` with no args drops into the interactive welcome menu; subcommands are also available for scripting: `list`, `connect`, `add`, `edit`, `remove`, `import`, `import-json`, `export`, `check`, `sync`, `generate`, `search`, `which`, `test`, `history`, `tunnel {start,list,stop}`, `profile {add,list,use,remove}`, `theme`, `encrypt`/`decrypt`, `scp`/`sftp`/`rsync`, `mosh`, `known-hosts remove`, `tag {add,rm}`, and `key {add,list,add-agent,gen,copy-id}`.
 
 Tests (install with `pip install -e ".[dev]"` first to get pytest):
 

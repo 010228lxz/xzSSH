@@ -18,7 +18,12 @@ from xzssh.cli.helpers import (
     load_config_or_error,
     write_config,
 )
-from xzssh.cli.ui import print_error, print_info, print_warning
+from xzssh.cli.ui import (
+    get_autocomplete_style,
+    print_error,
+    print_info,
+    print_warning,
+)
 
 
 def run(
@@ -59,6 +64,7 @@ def run(
             ],
             meta_information=meta_info,
             ignore_case=True,
+            style=get_autocomplete_style(),
         ).ask()
 
         if not alias:
