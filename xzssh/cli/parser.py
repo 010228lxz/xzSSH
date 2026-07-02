@@ -37,7 +37,13 @@ class _SuggestingArgumentParser(argparse.ArgumentParser):
             super().error(message)  # default usage dump + exit(2)
             return
         bad = match.group(1)
-        choices = re.findall(r"'([^']+)'", match.group(2))
+        # Most versions repr-quote the choices, but Python 3.12.x joins
+        # them with str() (unquoted; cpython gh-117766, reverted in 3.13)
+        # — accept both, or 3.12 users get no suggestion.
+        raw_choices = match.group(2)
+        choices = re.findall(r"'([^']+)'", raw_choices) or [
+            c.strip() for c in raw_choices.split(",") if c.strip()
+        ]
         print_error(f"Unknown command: [accent]{bad}[/accent]")
         suggestion = difflib.get_close_matches(bad, choices, n=1, cutoff=0.5)
         if suggestion:

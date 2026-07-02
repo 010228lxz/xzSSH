@@ -27,6 +27,9 @@ def test_unknown_command_suggests_closest(captured_msgs):
     joined = " ".join(captured_msgs)
     assert "Unknown command" in joined
     assert "lsit" in joined
+    # Not just `"list" in joined`: the help pointer ("...full command
+    # list.") contains the word "list", which masked the 3.12 regression.
+    assert "Did you mean" in joined
     assert "list" in joined  # the suggestion
 
 
@@ -36,7 +39,26 @@ def test_unknown_nested_subcommand_suggests(captured_msgs):
     assert exc.value.code == 2
     joined = " ".join(captured_msgs)
     assert "Unknown command" in joined
+    assert "Did you mean" in joined
     assert "gen" in joined  # suggestion for the key sub-command
+
+
+def test_suggests_from_unquoted_choices_like_python_312(captured_msgs):
+    """Python 3.12.x joins the choices with str() instead of repr()
+    (cpython gh-117766, reverted in 3.13), so the message lists them
+    unquoted. Feed that format directly so every interpreter exercises
+    the 3.12 parsing path."""
+    p = parser_mod._SuggestingArgumentParser(prog="xzssh")
+    with pytest.raises(SystemExit) as exc:
+        p.error(
+            "argument key_command: invalid choice: 'gne' "
+            "(choose from add, list, add-agent, gen, copy-id)"
+        )
+    assert exc.value.code == 2
+    joined = " ".join(captured_msgs)
+    assert "Unknown command" in joined
+    assert "Did you mean" in joined
+    assert "gen" in joined
 
 
 def test_no_close_match_still_points_at_help(captured_msgs):

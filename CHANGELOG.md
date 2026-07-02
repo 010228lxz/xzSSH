@@ -38,6 +38,17 @@ all.
   `build_tunnel_command` now reuses it instead of assembling its own
   `-L`/`-R`/`-D` flags (no behavior change for `tunnel`).
 
+### Fixed
+
+- **"Did you mean?" suggestions work on Python 3.12 again.** Python
+  3.12.x's argparse lists the valid choices *unquoted* in its
+  invalid-choice error (cpython gh-117766, reverted in 3.13), which left
+  the typo-suggestion parser with no candidates: `xzssh key gne` printed
+  "Unknown command" without the "Did you mean gen?" hint, and the
+  Python 3.12 CI legs had been red since the feature shipped in v0.21.1.
+  Both message formats are now parsed, and a regression test feeds the
+  3.12-style message directly so every interpreter covers it.
+
 ## [0.23.1] — 2026-06-30
 
 UI polish and documentation accuracy.
