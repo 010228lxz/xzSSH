@@ -259,3 +259,69 @@ def test_main_menu_help_then_exit_routes_through_help(
     rc = main_menu(config_path, suggest_ports=False)
     assert rc == 0
     assert len(help_calls) == 1
+
+
+def test_main_menu_tunnels_back_exits_cleanly(
+    monkeypatch, tmp_path: Path, silence_console
+) -> None:
+    """Entering the tunnels submenu and backing out must not crash."""
+    config_path = tmp_path / "xzssh.json"
+
+    # main menu → tunnels, submenu → back, main menu → exit. Both loops
+    # share the monkeypatched prompt_select_action.
+    script = ScriptedActions(["tunnels", "back", "exit"])
+    monkeypatch.setattr(
+        "xzssh.cli.commands.menu.prompt_select_action", script
+    )
+
+    rc = main_menu(config_path, suggest_ports=False)
+    assert rc == 0
+    assert len(script.calls) == 3
+
+
+def test_main_menu_tunnels_list_routes_through_tunnel_cmd(
+    monkeypatch, tmp_path: Path, silence_console
+) -> None:
+    config_path = tmp_path / "xzssh.json"
+
+    script = ScriptedActions(["tunnels", "list", "back", "exit"])
+    monkeypatch.setattr(
+        "xzssh.cli.commands.menu.prompt_select_action", script
+    )
+
+    tunnel_calls: List[tuple] = []
+
+    def fake_tunnel_run(args, path):
+        tunnel_calls.append((args.tunnel_command, path))
+        return 0
+
+    monkeypatch.setattr(
+        "xzssh.cli.commands.menu.tunnel_cmd.run", fake_tunnel_run
+    )
+
+    rc = main_menu(config_path, suggest_ports=False)
+    assert rc == 0
+    assert tunnel_calls == [("list", config_path)]
+
+
+def test_main_menu_tunnels_start_with_no_forward_hosts_errors(
+    monkeypatch, tmp_path: Path, silence_console
+) -> None:
+    """Start with no forward-bearing hosts shows an error, not a crash."""
+    config_path = tmp_path / "xzssh.json"
+    _seed_one_host(config_path)  # host without forwards
+
+    script = ScriptedActions(["tunnels", "start", "back", "exit"])
+    monkeypatch.setattr(
+        "xzssh.cli.commands.menu.prompt_select_action", script
+    )
+
+    errors: List[str] = []
+    monkeypatch.setattr(
+        "xzssh.cli.commands.menu.print_error",
+        lambda msg: errors.append(msg),
+    )
+
+    rc = main_menu(config_path, suggest_ports=False)
+    assert rc == 0
+    assert any("No hosts with forwards" in e for e in errors)

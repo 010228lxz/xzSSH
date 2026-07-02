@@ -122,18 +122,16 @@ def _busy_local_ports(host: Host) -> List[int]:
 def build_tunnel_command(host: Host) -> List[str]:
     """The ``ssh -N`` argv for *host*'s forwards.
 
-    Forwards are injected as flags here — unlike connect/which/test,
-    where they deliberately stay in the generated config — because for
-    a tunnel the forwards ARE the command.
+    Forwards are always on the command line here — for a tunnel the
+    forwards ARE the command — via the shared ``include_forwards`` path
+    in :func:`build_ssh_command`. ``ExitOnForwardFailure=yes`` because a
+    tunnel whose forwards failed to bind is worse than a failed command.
     """
-    extra: List[str] = ["-N", "-o", "ExitOnForwardFailure=yes"]
-    for lf in host.local_forwards:
-        extra.extend(["-L", f"{lf.local_port}:{lf.remote_host}:{lf.remote_port}"])
-    for rf in host.remote_forwards:
-        extra.extend(["-R", f"{rf.remote_port}:{rf.local_host}:{rf.local_port}"])
-    for dp in host.dynamic_forwards:
-        extra.extend(["-D", str(dp)])
-    return build_ssh_command(host, extra_options=extra)
+    return build_ssh_command(
+        host,
+        extra_options=["-N", "-o", "ExitOnForwardFailure=yes"],
+        include_forwards=True,
+    )
 
 
 def _start(args: argparse.Namespace, config_path: Path) -> int:

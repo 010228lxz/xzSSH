@@ -103,7 +103,7 @@ While the interactive mode is recommended, `xzssh` provides a full standard CLI:
 | Command | Description |
 | :--- | :--- |
 | `list [--tag T]` | Display all configured hosts in a styled table (filter by tag; `--match-all` for AND semantics). |
-| `connect [alias]` | Quickly connect to a host via alias or fuzzy search (`--dry-run` to preview). |
+| `connect [alias]` | Quickly connect to a host via alias or fuzzy search (`--dry-run` to preview; `--forwards` to also open the host's port-forwards — the interactive picker offers this automatically). |
 | `which <alias>` | Print the resolved `ssh` command line without running it. |
 | `search <query>` | Search hosts by alias, hostname, user, tag, or proxy-jump. |
 | `test [alias]` | Probe connectivity (`--all` for every host) without opening a shell. |

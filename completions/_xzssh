@@ -322,6 +322,7 @@ _xzssh() {
             '*--tag[Restrict fuzzy-search choices to this tag]:tag:' \
             '--match-all[Require ALL given tags (AND)]' \
             '--dry-run[Print the ssh command without connecting]' \
+            '--forwards[Also open the host'"'"'s port-forwards with this session]' \
             '1:host alias:_xzssh_aliases' && ret=0 ;;
         which|edit) _arguments '1:host alias:_xzssh_aliases' && ret=0 ;;
         mosh)

@@ -182,6 +182,14 @@ commitments.
   (bracketed `[host]:port`, honours UserKnownHostsFile) and a mosh
   transport wrapper that reuses the host's resolved ssh options.
 
+- ✅ **Forwards meet the interactive workflow — v0.24.0.** Born from
+  user feedback ("I connect and my LocalForward doesn't work"):
+  `connect --forwards` opens the host's forwards with the session
+  (`-L`/`-R`/`-D`), the interactive picker asks once when the chosen
+  host has forwards, and the management menu gained a `(t)` Tunnels
+  start/list/stop submenu. Plain `connect <alias>` stays prompt-free
+  and forward-free for scripts.
+
 - ☐ **`history stats`** (S) — aggregate the existing event log
   (most-used hosts, success rate, last failure).
 

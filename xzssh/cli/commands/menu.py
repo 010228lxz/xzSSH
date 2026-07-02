@@ -13,8 +13,10 @@ from xzssh.cli.commands import (
     import_ as import_cmd,
     list_ as list_cmd,
     remove as remove_cmd,
+    tunnel as tunnel_cmd,
 )
 from xzssh.cli.helpers import load_config_if_exists
+from xzssh.cli.tunnels import load_state, state_path
 from xzssh.cli.ui import (
     console,
     print_banner,
@@ -189,6 +191,10 @@ def main_menu(config_path: Path, suggest_ports: bool) -> int:
                     value="check",
                 ),
                 questionary.Choice(
+                    [("class:shortcut", "(t)"), ("class:text", " "), ("class:text", "Tunnels (start/list/stop)")],
+                    value="tunnels",
+                ),
+                questionary.Choice(
                     [("class:shortcut", "(h)"), ("class:text", " "), ("class:text", "View Help")],
                     value="help",
                 ),
@@ -206,6 +212,7 @@ def main_menu(config_path: Path, suggest_ports: bool) -> int:
                 "i": "import",
                 "g": "generate",
                 "k": "check",
+                "t": "tunnels",
                 "h": "help",
                 "x": "exit",
             },
@@ -304,8 +311,152 @@ def main_menu(config_path: Path, suggest_ports: bool) -> int:
         elif action == "check":
             check_cmd.run(config_path, suggest_ports)
             questionary.press_any_key_to_continue().ask()
+        elif action == "tunnels":
+            _tunnels_menu(config_path)
         elif action == "help":
             print_help()
             questionary.press_any_key_to_continue().ask()
 
     return 0
+
+
+def _tunnels_menu(config_path: Path) -> None:
+    """Submenu for port-forward tunnels: start / list / stop."""
+    while True:
+        action = prompt_select_action(
+            "Tunnels",
+            choices=[
+                questionary.Choice(
+                    [("class:shortcut", "(s)"), ("class:text", " "), ("class:text", "Start a tunnel")],
+                    value="start",
+                ),
+                questionary.Choice(
+                    [("class:shortcut", "(l)"), ("class:text", " "), ("class:text", "List tunnels")],
+                    value="list",
+                ),
+                questionary.Choice(
+                    [("class:shortcut", "(p)"), ("class:text", " "), ("class:text", "Stop a tunnel")],
+                    value="stop",
+                ),
+                questionary.Separator(),
+                questionary.Choice(
+                    [("class:shortcut", "(b)"), ("class:text", " "), ("class:text", "Back")],
+                    value="back",
+                ),
+            ],
+            shortcuts={"s": "start", "l": "list", "p": "stop", "b": "back"},
+        )
+
+        if action == "back" or action is None:
+            break
+
+        if action == "start":
+            config = load_config_if_exists(config_path)
+            candidates = [
+                h
+                for h in (config.hosts if config else [])
+                if h.local_forwards or h.remote_forwards or h.dynamic_forwards
+            ]
+            if not candidates:
+                print_error(
+                    "No hosts with forwards configured. Add local_forwards / "
+                    "remote_forwards / dynamic_forwards to a host first "
+                    "(e.g. `xzssh edit <alias>`)."
+                )
+                questionary.press_any_key_to_continue().ask()
+                continue
+
+            start_choices = [
+                questionary.Choice(
+                    title=[
+                        ("class:shortcut", f"({i+1})"),
+                        ("class:text", " "),
+                        ("class:text", f"{h.alias} ({h.host_name})"),
+                    ],
+                    value=h.alias,
+                )
+                for i, h in enumerate(candidates)
+            ]
+            start_choices.extend([
+                questionary.Separator(),
+                questionary.Choice(
+                    [("class:shortcut", "(b)"), ("class:text", " "), ("class:text", "Back / Cancel")],
+                    value="back",
+                ),
+            ])
+            start_shortcuts = {
+                str(i + 1): h.alias for i, h in enumerate(candidates) if i < 9
+            }
+            start_shortcuts["b"] = "back"
+
+            alias = prompt_select_action(
+                "Start a tunnel to:",
+                choices=start_choices,
+                shortcuts=start_shortcuts,
+            )
+            if not alias or alias == "back":
+                continue
+
+            detach = questionary.confirm(
+                "Run it in the background (detached)?", default=True
+            ).ask()
+            tunnel_cmd.run(
+                argparse.Namespace(
+                    tunnel_command="start", alias=alias, detach=bool(detach)
+                ),
+                config_path,
+            )
+            questionary.press_any_key_to_continue().ask()
+        elif action == "list":
+            tunnel_cmd.run(
+                argparse.Namespace(tunnel_command="list"), config_path
+            )
+            questionary.press_any_key_to_continue().ask()
+        elif action == "stop":
+            records = load_state(state_path())
+            if not records:
+                print_error(
+                    "No tunnels recorded. Start one first (or see "
+                    "`xzssh tunnel start`)."
+                )
+                questionary.press_any_key_to_continue().ask()
+                continue
+
+            stop_choices = [
+                questionary.Choice(
+                    title=[
+                        ("class:shortcut", f"({i+1})"),
+                        ("class:text", " "),
+                        ("class:text", f"{r.alias} (pid {r.pid})"),
+                    ],
+                    value=r.alias,
+                )
+                for i, r in enumerate(records)
+            ]
+            stop_choices.extend([
+                questionary.Separator(),
+                questionary.Choice(
+                    [("class:shortcut", "(b)"), ("class:text", " "), ("class:text", "Back / Cancel")],
+                    value="back",
+                ),
+            ])
+            stop_shortcuts = {
+                str(i + 1): r.alias for i, r in enumerate(records) if i < 9
+            }
+            stop_shortcuts["b"] = "back"
+
+            alias = prompt_select_action(
+                "Stop which tunnel?",
+                choices=stop_choices,
+                shortcuts=stop_shortcuts,
+            )
+            if not alias or alias == "back":
+                continue
+
+            tunnel_cmd.run(
+                argparse.Namespace(
+                    tunnel_command="stop", alias=alias, all=False
+                ),
+                config_path,
+            )
+            questionary.press_any_key_to_continue().ask()

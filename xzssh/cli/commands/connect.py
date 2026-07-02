@@ -39,6 +39,10 @@ def run(
         return 1
 
     alias = args.alias
+    # Only the interactive picker path may prompt about forwards below —
+    # an explicit alias means a scripted/deliberate call, where prompts
+    # would break pipelines (opt in with --forwards instead).
+    picked_interactively = not alias
     if not alias:
         # Tags only narrow the fuzzy-search candidates; they are ignored when
         # the caller already provided an explicit alias.
@@ -76,7 +80,26 @@ def run(
         print_error(f"Host not found: {alias}")
         return 1
 
-    ssh_args = build_ssh_command(host)
+    # getattr: the interactive menus call run() with a hand-built
+    # Namespace that has no forwards attribute (same as dry_run below).
+    include_forwards = getattr(args, "forwards", False)
+    if picked_interactively and not include_forwards:
+        n_forwards = (
+            len(host.local_forwards)
+            + len(host.remote_forwards)
+            + len(host.dynamic_forwards)
+        )
+        if n_forwards:
+            # None (Ctrl-C on the prompt) falls through to a plain connect.
+            include_forwards = bool(
+                questionary.confirm(
+                    f"'{host.alias}' has {n_forwards} port-forward(s). "
+                    "Open them with this session?",
+                    default=True,
+                ).ask()
+            )
+
+    ssh_args = build_ssh_command(host, include_forwards=include_forwards)
 
     # getattr (not args.dry_run): the interactive menus call run() with a
     # hand-built Namespace that has no dry_run attribute.

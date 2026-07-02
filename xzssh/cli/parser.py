@@ -153,6 +153,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Print the ssh command that would run, without connecting or "
         "stamping last_used",
     )
+    connect_parser.add_argument(
+        "--forwards",
+        action="store_true",
+        help="Also open the host's LocalForward/RemoteForward/DynamicForward "
+        "rules with this session (as -L/-R/-D flags)",
+    )
 
     subparsers.add_parser("menu", parents=[parent], help="Open interactive management menu")
 

@@ -187,7 +187,9 @@ def filter_hosts_by_tags(
 
 
 def build_ssh_command(
-    host: Host, extra_options: Optional[List[str]] = None
+    host: Host,
+    extra_options: Optional[List[str]] = None,
+    include_forwards: bool = False,
 ) -> List[str]:
     """Build the ``ssh`` argv for connecting to *host*.
 
@@ -195,6 +197,12 @@ def build_ssh_command(
     all share one source of truth. ``extra_options`` is appended verbatim
     before the connection target (useful for ``-o BatchMode=yes`` and
     similar overrides).
+
+    Forwards are NOT injected by default — plain connect/which/test leave
+    them to the generated config. ``include_forwards`` opts a session into
+    them explicitly as ``-L``/``-R``/``-D`` flags: always on for ``tunnel``
+    (the forwards ARE the command there), and on request for
+    ``connect --forwards``.
     """
     args: List[str] = ["ssh"]
     if host.port:
@@ -203,15 +211,15 @@ def build_ssh_command(
         args.extend(["-i", host.identity_file])
     if host.proxy_jump:
         args.extend(["-J", host.proxy_jump])
-    # Scalar ssh options become `-o Key=value`. Forwards are deliberately
-    # NOT injected here — they belong in the generated config, not in an
-    # interactive connect/which/test command line.
+    # Scalar ssh options become `-o Key=value`.
     for key, value in _scalar_ssh_options(host):
         args.extend(["-o", f"{key}={value}"])
     # Free-form options too, after the scalars so a managed directive (a
     # typed field) wins — ssh takes the first `-o` value for a key.
     for key, value in host.options.items():
         args.extend(["-o", f"{key}={value}"])
+    if include_forwards:
+        args.extend(forward_flags(host))
     if extra_options:
         args.extend(extra_options)
     target = host.host_name
@@ -219,6 +227,18 @@ def build_ssh_command(
         target = f"{host.user}@{target}"
     args.append(target)
     return args
+
+
+def forward_flags(host: Host) -> List[str]:
+    """``-L``/``-R``/``-D`` flags for *host*'s forwards, in declaration order."""
+    flags: List[str] = []
+    for lf in host.local_forwards:
+        flags.extend(["-L", f"{lf.local_port}:{lf.remote_host}:{lf.remote_port}"])
+    for rf in host.remote_forwards:
+        flags.extend(["-R", f"{rf.remote_port}:{rf.local_host}:{rf.local_port}"])
+    for dp in host.dynamic_forwards:
+        flags.extend(["-D", str(dp)])
+    return flags
 
 
 def build_ssh_copy_id_command(
